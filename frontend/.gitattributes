@@ -1,0 +1,11 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force specific files to use specific line endings
+*.css text eol=crlf
+*.tsx text eol=crlf
+*.ts text eol=crlf
+*.js text eol=crlf
+*.jsx text eol=crlf
+*.json text eol=crlf
+*.md text eol=crlf
