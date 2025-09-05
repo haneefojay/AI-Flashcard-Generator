@@ -1,60 +1,21 @@
-from fastapi import APIRouter, UploadFile, File
-from app import schemas
-import PyPDF2
-from docx import Document
+from fastapi import APIRouter, UploadFile, File, Form
+import tempfile
+from app.services.file_parser import extract_text_from_file
+from app.services.ai_generator import generate_flashcards_from_text
 
-router = APIRouter(
-    prefix="/flashcards",
-    tags=["Generate Flashcards"]
-)
+router = APIRouter()
 
-# --- Helpers ---
-def extract_text_from_pdf(file):
-    reader = PyPDF2.PdfReader(file)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() or ""
-    return text
-
-def extract_text_from_docx(file):
-    doc = Document(file)
-    return "\n".join([p.text for p in doc.paragraphs])
-
-def extract_text_from_md(file):
-    content = file.read().decode("utf-8")
-    return content
-
-# --- Routes ---
-@router.post("/generate", response_model=schemas.FlashcardResponse)
-async def generate_flashcards(request: dict):
-    """
-    Accept raw text input and return dummy flashcards
-    """
-    text = request.get("text", "")
-    # For now, generate dummy flashcards
-    cards = [
-        {"question": f"What is the main idea of: {text[:30]}?", "answer": text[:100]}
-    ]
+@router.post("/flashcards/generate")
+async def generate_flashcards(text: str = Form(...)):
+    cards = generate_flashcards_from_text(text)
     return {"cards": cards}
 
+@router.post("/flashcards/upload")
+async def upload_file(file: UploadFile = File(...)):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file.filename) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
 
-@router.post("/upload", response_model=schemas.FlashcardResponse)
-async def upload_flashcards(file: UploadFile = File(...)):
-    """
-    Accept PDF, DOCX, or MD file and return dummy flashcards
-    """
-    extracted_text = ""
-    if file.filename.endswith(".pdf"):
-        extracted_text = extract_text_from_pdf(file.file)
-    elif file.filename.endswith(".docx"):
-        extracted_text = extract_text_from_docx(file.file)
-    elif file.filename.endswith(".md"):
-        extracted_text = extract_text_from_md(file.file)
-    else:
-        return {"cards": [{"question": "Unsupported file type", "answer": file.filename}]}
-
-    # Dummy flashcards
-    cards = [
-        {"question": f"What is the main idea of {file.filename}?", "answer": extracted_text[:150]}
-    ]
+    text = extract_text_from_file(tmp_path)
+    cards = generate_flashcards_from_text(text)
     return {"cards": cards}

@@ -1,12 +1,12 @@
 from pydantic import BaseModel
 from typing import List
 
-class FlashcardItem(BaseModel):
+class Flashcard(BaseModel):
     question: str
     answer: str
 
-class FlashcardRequest(BaseModel):
+class GenerateFlashcardsRequest(BaseModel):
     text: str
 
-class FlashcardResponse(BaseModel):
-    cards: List[FlashcardItem]
+class GenerateFlashcardsResponse(BaseModel):
+    cards: List[Flashcard]
