@@ -99,7 +99,7 @@ export default function GeneratePage() {
 
   const hasTextInput = inputText.trim().length > 0
   const hasFileInput = uploadedFile !== null
-  const canGenerate = (hasTextInput || hasFileInput) && isHealthy && !isLoading
+  //const canGenerate = (hasTextInput || hasFileInput) && isHealthy && !isLoading
 
   return (
     <div className="min-h-screen bg-background">
@@ -151,7 +151,7 @@ export default function GeneratePage() {
                     <div>
                       <h3 className="font-medium text-destructive-foreground">Backend Server Unavailable</h3>
                       <p className="text-sm text-destructive-foreground/90 mt-1">
-                        The AI backend server is not responding. Please make sure it's running at http://127.0.0.1:8000
+                        The AI backend server is not responding. Please make sure it&apos;s running at http://127.0.0.1:8000
                       </p>
                       {healthError && <p className="text-xs text-destructive-foreground/80 mt-2">{healthError}</p>}
                     </div>

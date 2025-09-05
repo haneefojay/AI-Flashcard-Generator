@@ -13,7 +13,7 @@ export default function NotFound() {
           <h1 className="text-4xl font-bold text-foreground mb-2">404</h1>
           <h2 className="text-xl font-semibold text-foreground mb-2">Page Not Found</h2>
           <p className="text-muted-foreground text-pretty">
-            The page you're looking for doesn't exist. Let's get you back to generating flashcards!
+            The page you&apos;re looking for doesn&apos;t exist. Let&apos;s get you back to generating flashcards!
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">

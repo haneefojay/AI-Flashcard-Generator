@@ -23,9 +23,9 @@ interface HealthResponse {
 class ApiClient {
   private baseUrl: string
 
-  constructor(baseUrl = "http://127.0.0.1:8000") {
-    this.baseUrl = baseUrl
-  }
+  constructor(baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000") {
+  this.baseUrl = baseUrl
+}
 
   async healthCheck(): Promise<HealthResponse> {
     try {
