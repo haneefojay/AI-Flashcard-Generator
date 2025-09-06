@@ -7,8 +7,8 @@ interface UseFlashcardsReturn {
   flashcards: Flashcard[]
   isLoading: boolean
   error: string | null
-  generateFlashcards: (text: string) => Promise<void>
-  uploadFileForFlashcards: (file: File) => Promise<void>
+  generateFlashcards: (text: string, count: number) => Promise<void>
+  uploadFileForFlashcards: (file: File, count: number) => Promise<void>
   clearFlashcards: () => void
   clearError: () => void
 }
@@ -18,7 +18,7 @@ export function useFlashcards(): UseFlashcardsReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const generateFlashcards = async (text: string) => {
+  const generateFlashcards = async (text: string, count: number) => {
     if (!text.trim()) {
       setError("Please enter some text to generate flashcards.")
       return
@@ -28,7 +28,7 @@ export function useFlashcards(): UseFlashcardsReturn {
     setError(null)
 
     try {
-      const response = await apiClient.generateFlashcards(text)
+      const response = await apiClient.generateFlashcards(text, count)
       setFlashcards(response.cards)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate flashcards")
@@ -38,12 +38,12 @@ export function useFlashcards(): UseFlashcardsReturn {
     }
   }
 
-  const uploadFileForFlashcards = async (file: File) => {
+  const uploadFileForFlashcards = async (file: File, count: number) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await apiClient.uploadFileForFlashcards(file)
+      const response = await apiClient.uploadFileForFlashcards(file, count)
       setFlashcards(response.cards)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process uploaded file")

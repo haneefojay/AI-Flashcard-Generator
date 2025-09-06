@@ -1,36 +1,53 @@
-from typing import Optional, List, Dict
-from openai import OpenAI
-import json
 from ..core.config import settings
+from groq import Groq
+import json
 
-client = OpenAI(api_key=settings.openai_api_key)
+client = Groq(api_key=settings.groq_api_key)
+import json
 
-def generate_flashcards_from_text(text: str, num_cards: int = 5) -> List[Dict[str, str]]:
-    prompt =f"""
-    Create {num_cards} flashcards (question and answer) from the following text:
-    
+def generate_flashcards_with_groq(text: str, count: int = 10):
+    prompt = f"""
+    Generate exactly {count} flashcards from the following text:
+
     {text}
-    
-    Format response as JSON list of objects:
-    [
-        {{"question": "...", "answer": "..."}},
-        ...
-    ]
-    """
-    
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
-        
-        content = response.choices[0].message.content.strip()
-        
-        cards = json.loads(content)
-        return cards
-    
-    except Exception as e:
-        return [
-            {"question": "Error generating flashcards", "answer": str(e)}
+
+    Return ONLY a JSON object in the following format, with no explanation, no markdown, no code fences:
+
+    {{
+        "cards": [
+            {{"question": "Question 1", "answer": "Answer 1"}},
+            {{"question": "Question 2", "answer": "Answer 2"}},
+            {{"question": "Question 3", "answer": "Answer 3"}},
+            {{"question": "Question 4", "answer": "Answer 4"}},
+            {{"question": "Question 5", "answer": "Answer 5"}}
         ]
+    }}
+    """
+
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": "You are a flashcard generator. Always respond with valid JSON only."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.7,
+        max_tokens=800
+    )
+
+    raw_output = response.choices[0].message.content.strip()
+
+    try:
+        parsed = json.loads(raw_output)
+
+        # ✅ Handle case where flashcards are nested in answer
+        if (
+            "cards" in parsed
+            and len(parsed["cards"]) == 1
+            and isinstance(parsed["cards"][0].get("answer"), dict)
+            and "cards" in parsed["cards"][0]["answer"]
+        ):
+            parsed = {"cards": parsed["cards"][0]["answer"]["cards"]}
+
+        return parsed
+    except json.JSONDecodeError:
+        return {"cards": [{"question": "Error parsing output", "answer": raw_output}]}

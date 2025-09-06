@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from .routers import flashcard
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+app = FastAPI(title="AI Flashcard Generator")
 
 '''
 origins = [

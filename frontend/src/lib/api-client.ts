@@ -5,6 +5,7 @@ interface Flashcard {
 
 interface GenerateFlashcardsRequest {
   text: string
+  count: number
 }
 
 interface GenerateFlashcardsResponse {
@@ -47,14 +48,14 @@ class ApiClient {
     }
   }
 
-  async generateFlashcards(text: string): Promise<GenerateFlashcardsResponse> {
+  async generateFlashcards(text: string, count: number): Promise<GenerateFlashcardsResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/flashcards/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text } as GenerateFlashcardsRequest),
+        body: JSON.stringify({ text, count } as GenerateFlashcardsRequest),
       })
 
       if (!response.ok) {
@@ -83,10 +84,11 @@ class ApiClient {
     }
   }
 
-  async uploadFileForFlashcards(file: File): Promise<UploadFlashcardsResponse> {
+  async uploadFileForFlashcards(file: File, count: number): Promise<UploadFlashcardsResponse> {
     try {
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("count", count.toString())
 
       const response = await fetch(`${this.baseUrl}/flashcards/upload`, {
         method: "POST",
@@ -120,10 +122,8 @@ class ApiClient {
   }
 }
 
-// Export singleton instance
 export const apiClient = new ApiClient()
 
-// Export types
 export type {
   Flashcard,
   GenerateFlashcardsRequest,

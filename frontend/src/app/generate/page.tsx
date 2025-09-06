@@ -15,6 +15,7 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 
 export default function GeneratePage() {
   const [inputText, setInputText] = useState("")
+  const [count, setCount] = useState(2)
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -81,12 +82,12 @@ export default function GeneratePage() {
   }, [])
 
   const handleGenerateFromText = async () => {
-    await generateFlashcards(inputText)
+    await generateFlashcards(inputText, count)
   }
 
   const handleGenerateFromFile = async () => {
     if (uploadedFile) {
-      await uploadFileForFlashcards(uploadedFile)
+      await uploadFileForFlashcards(uploadedFile, count)
     }
   }
 
@@ -184,6 +185,16 @@ export default function GeneratePage() {
 
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">{inputText.length} characters</div>
+                    <div>
+                      <input
+                        type="number"
+                        min={1}
+                        value={count}
+                        onChange={(e) => setCount(Number(e.target.value))}
+                        className="w-20 px-2 py-1 border rounded text-sm"
+                        disabled={isLoading}
+                      />
+                    </div>
                     <Button
                       onClick={handleGenerateFromText}
                       disabled={!hasTextInput || !isHealthy || isLoading}
@@ -234,6 +245,16 @@ export default function GeneratePage() {
                         </Button>
                       </div>
 
+                      <div>
+                        <input
+                        type="number"
+                        min={1}
+                        value={count}
+                        onChange={(e) => setCount(Number(e.target.value))}
+                        className="w-20 px-2 py-1 border rounded text-sm"
+                        disabled={isLoading}
+                      />
+                      </div>
                       <Button
                         onClick={handleGenerateFromFile}
                         disabled={!hasFileInput || !isHealthy || isLoading}

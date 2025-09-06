@@ -5,8 +5,9 @@ class Flashcard(BaseModel):
     question: str
     answer: str
 
-class GenerateFlashcardsRequest(BaseModel):
+class FlashcardsRequest(BaseModel):
     text: str
+    count: int = 10
 
-class GenerateFlashcardsResponse(BaseModel):
+class FlashcardsResponse(BaseModel):
     cards: List[Flashcard]
