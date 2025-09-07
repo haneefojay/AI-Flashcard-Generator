@@ -126,12 +126,12 @@ export default function GeneratePage() {
               ) : isHealthy ? (
                 <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full border border-green-200">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Backend Ready</span>
+                  <span className="text-sm font-medium">Ready</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-destructive-foreground bg-destructive px-4 py-2 rounded-full">
                   <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Backend Offline</span>
+                  <span className="text-sm font-medium">Server Offline</span>
                   <Button
                     size="sm"
                     variant="outline"
