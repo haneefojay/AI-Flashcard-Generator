@@ -150,11 +150,8 @@ export default function GeneratePage() {
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
                     <div className="text-sm text-red-600 dark:text-red-400 mt-1">
-                      <h3>Backend Server Unavailable</h3>
-                      <p >
-                        The AI backend server is not responding. Please make sure it&apos;s running at http://127.0.0.1:8000
-                      </p>
-                      {healthError && <p className="text-xs text-destructive-foreground/80 mt-2">{healthError}</p>}
+                      <h3>Error</h3>
+                      {healthError && <p className="text-sm text-red-600 dark:text-red-400 mt-1">{healthError}</p>}
                     </div>
                   </div>
                 </CardContent>
