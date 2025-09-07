@@ -30,22 +30,19 @@ async def upload_file_for_flashcards(
     Upload a file (PDF, DOCX, TXT, MD) and generate flashcards from its content.
     """
     try:
-        # Save file temporarily
         suffix = os.path.splitext(file.filename)[-1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(await file.read())
             tmp_path = tmp.name
 
-        # Extract text from file
         text = extract_text_from_file(tmp_path)
-
-        # Clean up temp file
+        
         os.unlink(tmp_path)
-
+        
         if not text.strip():
             raise HTTPException(status_code=400, detail="No text could be extracted from the file.")
-
-        # Generate flashcards using AI
+        
+        
         try:
             result = generate_flashcards_with_groq(text, count=count)
         except Exception as e:

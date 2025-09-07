@@ -38,8 +38,7 @@ def generate_flashcards_with_groq(text: str, count: int = 10):
 
     try:
         parsed = json.loads(raw_output)
-
-        # ✅ Handle case where flashcards are nested in answer
+        
         if (
             "cards" in parsed
             and len(parsed["cards"]) == 1
