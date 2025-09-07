@@ -46,21 +46,26 @@ async def upload_file_for_flashcards(
             raise HTTPException(status_code=400, detail="No text could be extracted from the file.")
 
         # Generate flashcards using AI
-        result = generate_flashcards_with_groq(text, count=count)
+        try:
+            result = generate_flashcards_with_groq(text, count=count)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"AI Generation error: {str(e)}"
+            )
 
         if not isinstance(result, dict) or "cards" not in result:
             raise HTTPException(
-                status_code=500,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Invalid response format from AI generator"
             )
         
-        print(f"Received count={count}, file={file.filename}")
         return schemas.FlashcardsResponse(cards=result["cards"])
 
-    except ValueError as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Failed to process file: {str(e)}"
+            detail=f"Unexpected error: {str(e)}"
         )

@@ -15,7 +15,7 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 
 export default function GeneratePage() {
   const [inputText, setInputText] = useState("")
-  const [count, setCount] = useState(2)
+  const [count, setCount] = useState(5)
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -184,34 +184,35 @@ export default function GeneratePage() {
                   />
 
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">{inputText.length} characters</div>
-                    <div>
-                      <input
-                        type="number"
-                        min={1}
-                        value={count}
-                        onChange={(e) => setCount(Number(e.target.value))}
-                        className="w-20 px-2 py-1 border rounded text-sm"
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleGenerateFromText}
-                      disabled={!hasTextInput || !isHealthy || isLoading}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Generate from Text
-                        </>
-                      )}
-                    </Button>
+                    <div className="text-sm text-muted-foreground">{inputText.length}</div>
+                      <div className="flex items-center justify-between">
+                        <input
+                          type="number"
+                          min={1}
+                          value={count}
+                          onChange={(e) => setCount(Number(e.target.value))}
+                          className="w-20 px-2 py-1 border rounded text-sm mr-2"
+                          disabled={isLoading}
+                        />
+
+                        <Button
+                          onClick={handleGenerateFromText}
+                          disabled={!hasTextInput || !isHealthy || isLoading}
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Generate from Text
+                            </>
+                          )}
+                        </Button>
+                      </div>
                   </div>
                 </CardContent>
               </Card>
@@ -315,11 +316,16 @@ export default function GeneratePage() {
             </div>
 
             {error && (
-              <Card className="border-destructive/20 bg-destructive/5">
+              <Card className="border-red-500 bg-red-50 dark:bg-red-900/10">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-                    <div className="text-sm text-destructive-foreground">{error}</div>
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-base font-semibold text-red-600 dark:text-red-400">Error</div>
+                      <div className="text-sm text-red-600 dark:text-red-400 mt-1">
+                        {error}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -96,13 +96,19 @@ class ApiClient {
       })
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        const errorMessage = errorData?.detail || `Failed to process file: ${response.status}`
+
+        if (response.status === 413){
+          throw new Error("File is too large.Please try a smaller file.")
+        }
         if (response.status === 422) {
           throw new Error("Invalid file format or content. Please check your file and try again.")
         }
         if (response.status >= 500) {
-          throw new Error("Server error. Please try again later.")
+          throw new Error(`Server error: ${errorMessage}`)
         }
-        throw new Error(`Failed to process file: ${response.status}`)
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
