@@ -8,6 +8,9 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: "FlashAI - AI Flashcard Generator",
+  icons: {
+    icon: "/favicon.svg",
+  },
   description:
     "Turn your notes into study cards instantly with AI. Generate interactive flashcards from any text and improve your learning efficiency.",
   keywords: ["flashcards", "AI", "study", "learning", "education", "notes", "memorization"],

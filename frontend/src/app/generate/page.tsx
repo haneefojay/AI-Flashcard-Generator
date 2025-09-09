@@ -121,7 +121,7 @@ export default function GeneratePage() {
               {healthLoading ? (
                 <div className="flex items-center gap-2 text-muted-foreground bg-muted/50 px-4 py-2 rounded-full">
                   <LoadingSpinner size="sm" />
-                  <span className="text-sm">Checking backend status...</span>
+                  <span className="text-sm">Please wait...</span>
                 </div>
               ) : isHealthy ? (
                 <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full border border-green-200">
