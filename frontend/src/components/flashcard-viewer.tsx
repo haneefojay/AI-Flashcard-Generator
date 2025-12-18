@@ -17,6 +17,7 @@ interface FlashcardViewerProps {
 export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
 
   if (flashcards.length === 0) {
     return null
@@ -26,20 +27,32 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
 
   const handleNext = () => {
     if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-      setIsFlipped(false)
+      setIsAnimating(true)
+      setTimeout(() => {
+        setCurrentIndex(currentIndex + 1)
+        setIsFlipped(false)
+        setIsAnimating(false)
+      }, 150)
     }
   }
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-      setIsFlipped(false)
+      setIsAnimating(true)
+      setTimeout(() => {
+        setCurrentIndex(currentIndex - 1)
+        setIsFlipped(false)
+        setIsAnimating(false)
+      }, 150)
     }
   }
 
   const handleFlip = () => {
-    setIsFlipped(!isFlipped)
+    setIsAnimating(true)
+    setTimeout(() => {
+      setIsFlipped(!isFlipped)
+      setIsAnimating(false)
+    }, 150)
   }
 
   return (
@@ -57,11 +70,18 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
         </div>
       </div>
 
-      {/* Flashcard */}
-      <div className="flex justify-center">
+      {/* Flashcard with Flip Animation */}
+      <div className="flex justify-center perspective">
         <Card
-          className="w-full max-w-2xl h-80 cursor-pointer border-border bg-card hover:shadow-lg transition-all duration-300"
+          className={`w-full max-w-2xl h-80 cursor-pointer border-border bg-card hover:shadow-lg transition-all duration-300 ${
+            isAnimating ? "opacity-75 scale-95" : "opacity-100 scale-100"
+          }`}
           onClick={handleFlip}
+          style={{
+            transform: isAnimating ? "rotateY(90deg)" : "rotateY(0deg)",
+            transformStyle: "preserve-3d",
+            transition: "all 150ms ease-in-out",
+          }}
         >
           <CardContent className="p-8 h-full flex items-center justify-center">
             <div className="text-center space-y-4">
@@ -86,13 +106,16 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
           onClick={handlePrevious}
           disabled={currentIndex === 0}
           variant="outline"
-          className="border-border text-foreground hover:bg-accent bg-transparent"
+          className="border-border text-foreground hover:bg-accent bg-transparent transition-all duration-200"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
           Previous
         </Button>
 
-        <Button onClick={handleFlip} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button
+          onClick={handleFlip}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-95"
+        >
           <RotateCcw className="h-4 w-4 mr-2" />
           Flip Card
         </Button>
@@ -101,7 +124,7 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
           onClick={handleNext}
           disabled={currentIndex === flashcards.length - 1}
           variant="outline"
-          className="border-border text-foreground hover:bg-accent bg-transparent"
+          className="border-border text-foreground hover:bg-accent bg-transparent transition-all duration-200"
         >
           Next
           <ChevronRight className="h-4 w-4 ml-2" />
@@ -115,8 +138,10 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
           {flashcards.map((card, index) => (
             <Card
               key={index}
-              className={`cursor-pointer border transition-all duration-200 ${
-                index === currentIndex ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"
+              className={`cursor-pointer border transition-all duration-200 hover:scale-105 ${
+                index === currentIndex
+                  ? "border-primary bg-primary/5 shadow-md"
+                  : "border-border bg-card hover:border-primary/50"
               }`}
               onClick={() => {
                 setCurrentIndex(index)

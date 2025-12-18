@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .routers import flashcard
+from .routers import flashcard, auth, route1, deck, export_deck
 from .core.config import settings
+from .models import Base
+from .database import engine, AsyncSessionLocal
+from sqlalchemy.sql import text
 import logging
 
 
@@ -20,21 +23,49 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.backend_cors_origin or ["*"],
+    allow_origins=settings.backend_cors_origins or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup():
+    # Create tables if they don't exist
+    async with engine.begin() as conn:
+        await conn.run_sync(lambda sync_conn: Base.metadata.create_all(bind=sync_conn))
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    # Close database connections
+    await engine.dispose()
+    logger.info("Closed database connections")
+
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with database connection test"""
+    try:
+        # Test database connection
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+            db_status = "connected"
+    except Exception as e:
+        logger.error(f"Database health check failed: {str(e)}")
+        db_status = "disconnected"
+        
     return {
         "status": "healthy",
+        "database": db_status,
         "version": settings.version
     }
 
 app.include_router(flashcard.router)
+app.include_router(auth.router)
+app.include_router(route1.router)
+app.include_router(deck.router)
+app.include_router(export_deck.router)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):

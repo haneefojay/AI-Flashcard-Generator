@@ -22,10 +22,17 @@ export function useHealthCheck(autoCheck = true): UseHealthCheckReturn {
     setError(null)
 
     try {
+      console.log("[FlashAI] Health check starting...")
       const response = await apiClient.healthCheck()
-      setIsHealthy(response.status === "ok" || response.status === "healthy")
+      console.log("[FlashAI] Health check response:", response)
+
+      const isHealthyResponse = response.status === "ok" || response.status === "healthy"
+      console.log("[FlashAI] Health status determined:", isHealthyResponse)
+
+      setIsHealthy(isHealthyResponse)
       setLastChecked(new Date())
     } catch (err) {
+      console.log("[FlashAI] Health check error:", err)
       setIsHealthy(false)
       setError(err instanceof Error ? err.message : "Health check failed")
     } finally {
@@ -36,6 +43,9 @@ export function useHealthCheck(autoCheck = true): UseHealthCheckReturn {
   useEffect(() => {
     if (autoCheck) {
       checkHealth()
+
+      const interval = setInterval(checkHealth, 30000)
+      return () => clearInterval(interval)
     }
   }, [autoCheck])
 

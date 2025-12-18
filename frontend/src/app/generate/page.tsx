@@ -15,9 +15,11 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 
 export default function GeneratePage() {
   const [inputText, setInputText] = useState("")
-  const [count, setCount] = useState(5)
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [questionMode, setQuestionMode] = useState<"multiple_choice" | "open-ended" | "true_false">("open-ended")
+  const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate")
+  const [cardCount, setCardCount] = useState(10)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { flashcards, isLoading, error, generateFlashcards, uploadFileForFlashcards, clearFlashcards, clearError } =
@@ -53,7 +55,7 @@ export default function GeneratePage() {
 
       if (supportedFile) {
         setUploadedFile(supportedFile)
-        setInputText("") // Clear text when file is selected
+        setInputText("")
         if (error) clearError()
       } else {
         alert("Please drop a supported file format: PDF, DOCX, TXT, or MD")
@@ -67,7 +69,7 @@ export default function GeneratePage() {
       const file = e.target.files?.[0]
       if (file) {
         setUploadedFile(file)
-        setInputText("") // Clear text when file is selected
+        setInputText("")
         if (error) clearError()
       }
     },
@@ -82,12 +84,12 @@ export default function GeneratePage() {
   }, [])
 
   const handleGenerateFromText = async () => {
-    await generateFlashcards(inputText, count)
+    await generateFlashcards(inputText, cardCount, questionMode, difficulty)
   }
 
   const handleGenerateFromFile = async () => {
     if (uploadedFile) {
-      await uploadFileForFlashcards(uploadedFile, count)
+      await uploadFileForFlashcards(uploadedFile, cardCount, questionMode, difficulty)
     }
   }
 
@@ -100,7 +102,7 @@ export default function GeneratePage() {
 
   const hasTextInput = inputText.trim().length > 0
   const hasFileInput = uploadedFile !== null
-  //const canGenerate = (hasTextInput || hasFileInput) && isHealthy && !isLoading
+  const canGenerate = (hasTextInput || hasFileInput) && isHealthy && !isLoading
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,17 +123,17 @@ export default function GeneratePage() {
               {healthLoading ? (
                 <div className="flex items-center gap-2 text-muted-foreground bg-muted/50 px-4 py-2 rounded-full">
                   <LoadingSpinner size="sm" />
-                  <span className="text-sm">Please wait...</span>
+                  <span className="text-sm">Checking backend status...</span>
                 </div>
               ) : isHealthy ? (
                 <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full border border-green-200">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Ready</span>
+                  <span className="text-sm font-medium">Backend Ready</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-destructive-foreground bg-destructive px-4 py-2 rounded-full">
                   <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Server Offline</span>
+                  <span className="text-sm font-medium">Backend Offline</span>
                   <Button
                     size="sm"
                     variant="outline"
@@ -149,14 +151,64 @@ export default function GeneratePage() {
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-                    <div className="text-sm text-red-600 dark:text-red-400 mt-1">
-                      <h3>Error</h3>
-                      {healthError && <p className="text-sm text-red-600 dark:text-red-400 mt-1">{healthError}</p>}
+                    <div>
+                      <h3 className="font-medium text-destructive-foreground">Backend Server Unavailable</h3>
+                      <p className="text-sm text-destructive-foreground/90 mt-1">
+                        The AI backend server is not responding. Please make sure it`&apos;`s running at http://127.0.0.1:8000
+                      </p>
+                      {healthError && <p className="text-xs text-destructive-foreground/80 mt-2">{healthError}</p>}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )}
+
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle className="text-card-foreground">Generation Options</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Question Mode</label>
+                    <select
+                      value={questionMode}
+                      onChange={(e) => setQuestionMode(e.target.value as "multiple_choice" | "open-ended" | "true_false")}
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="open-ended">Open-Ended</option>
+                      <option value="multiple_choice">Multiple Choice</option>
+                      <option value="true_false">True or False</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Difficulty Level</label>
+                    <select
+                      value={difficulty}
+                      onChange={(e) => setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced")}
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Number of Cards</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={cardCount}
+                      onChange={(e) => setCardCount(Math.max(1, Math.min(50, Number.parseInt(e.target.value) || 10)))}
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Text Input Method */}
@@ -173,7 +225,7 @@ export default function GeneratePage() {
                     value={inputText}
                     onChange={(e) => {
                       setInputText(e.target.value)
-                      if (uploadedFile) removeFile() // Clear file when typing
+                      if (uploadedFile) removeFile()
                       if (error) clearError()
                     }}
                     className="min-h-[200px] resize-none bg-input border-border text-foreground placeholder:text-muted-foreground"
@@ -181,35 +233,24 @@ export default function GeneratePage() {
                   />
 
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">{inputText.length}</div>
-                      <div className="flex items-center justify-between">
-                        <input
-                          type="number"
-                          min={1}
-                          value={count}
-                          onChange={(e) => setCount(Number(e.target.value))}
-                          className="w-15 px-2 py-1 border rounded text-sm mr-2"
-                          disabled={isLoading}
-                        />
-
-                        <Button
-                          onClick={handleGenerateFromText}
-                          disabled={!hasTextInput || !isHealthy || isLoading}
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                        >
-                          {isLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="mr-2 h-4 w-4" />
-                              Generate from Text
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                    <div className="text-sm text-muted-foreground">{inputText.length} characters</div>
+                    <Button
+                      onClick={handleGenerateFromText}
+                      disabled={!hasTextInput || !isHealthy || isLoading}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Generate from Text
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -243,16 +284,6 @@ export default function GeneratePage() {
                         </Button>
                       </div>
 
-                      <div>
-                        <input
-                        type="number"
-                        min={1}
-                        value={count}
-                        onChange={(e) => setCount(Number(e.target.value))}
-                        className="w-20 px-2 py-1 border rounded text-sm"
-                        disabled={isLoading}
-                      />
-                      </div>
                       <Button
                         onClick={handleGenerateFromFile}
                         disabled={!hasFileInput || !isHealthy || isLoading}
@@ -313,16 +344,11 @@ export default function GeneratePage() {
             </div>
 
             {error && (
-              <Card className="border-red-500 bg-red-50 dark:bg-red-900/10">
+              <Card className="border-destructive/20 bg-destructive/5">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
-                    <div className="flex-1">
-                      <div className="text-base font-semibold text-red-600 dark:text-red-400">Error</div>
-                      <div className="text-sm text-red-600 dark:text-red-400 mt-1">
-                        {error}
-                      </div>
-                    </div>
+                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                    <div className="text-sm text-destructive-foreground">{error}</div>
                   </div>
                 </CardContent>
               </Card>
