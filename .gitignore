@@ -22,3 +22,6 @@ frontend/dist/
 .vscode/
 .vscode/*
 .vscode
+vscode/
+vscode/*
+vscode
