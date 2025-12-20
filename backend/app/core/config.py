@@ -42,10 +42,13 @@ class Settings(BaseSettings):
     rounds: int = 12
     min_password_length: int = 8
     
+    google_client_id: str
+    
     
 
     class Config:
         env_file = ".env"
+        extra = "ignore" 
 
 settings = Settings()
 

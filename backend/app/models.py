@@ -16,7 +16,7 @@ class User(Base):
     )
     name: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
-    password: Mapped[str] = mapped_column(String, nullable=False)
+    password: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
     is_premium: Mapped[bool] = mapped_column(default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -24,6 +24,10 @@ class User(Base):
         server_default=func.now(),
         nullable=False
     )
+
+    @property
+    def has_password(self) -> bool:
+        return self.password is not None
 
     decks: Mapped[List["Deck"]] = relationship(
         "Deck",

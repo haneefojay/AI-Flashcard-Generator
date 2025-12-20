@@ -25,18 +25,18 @@ async def update_my_profile(updated_data: schemas.UserUpdate, db: AsyncSession  
         current_user.name = updated_data.name
         
     if updated_data.password is not None:
-        # Require current password to change password
-        if not updated_data.current_password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Current password is required to set a new password"
-            )
-        
-        if not verify_password(updated_data.current_password, current_user.password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Incorrect current password"
-            )
+        if current_user.has_password:
+            if not updated_data.current_password:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Current password is required to set a new password"
+                )
+            
+            if not verify_password(updated_data.current_password, current_user.password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Incorrect current password"
+                )
             
         current_user.password = hash_password(updated_data.password)
     

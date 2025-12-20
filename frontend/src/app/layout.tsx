@@ -5,6 +5,8 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { ToastProvider } from "@/components/ui/toast"
+import { GoogleOAuthProvider } from "@react-oauth/google"
+import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -42,11 +44,20 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        <ToastProvider>
-          <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
-        </ToastProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+            <ToastProvider>
+              <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+            </ToastProvider>
+          </GoogleOAuthProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

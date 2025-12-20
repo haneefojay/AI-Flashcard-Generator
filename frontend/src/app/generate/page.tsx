@@ -28,7 +28,7 @@ function GenerateContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showFileErrorModal, setShowFileErrorModal] = useState(false)
 
-  const { flashcards, isLoading, error, generateFlashcards, uploadFileForFlashcards, clearFlashcards, clearError } =
+  const { flashcards, summary, isLoading, error, generateFlashcards, uploadFileForFlashcards, clearFlashcards, clearError } =
     useFlashcards()
   const { isHealthy, isLoading: healthLoading, error: healthError, checkHealth } = useHealthCheck()
 
@@ -391,6 +391,22 @@ function GenerateContent() {
             </div>
 
             <FlashcardViewer flashcards={flashcards} />
+
+            {summary && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    AI Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground/90 leading-relaxed text-pretty">{summary}</p>
+                </CardContent>
+              </Card>
+            )}
+
+
 
             <div className="p-6 bg-primary/5 rounded-xl border border-primary/20 text-center">
               <h3 className="text-lg font-semibold text-foreground mb-2">Great job!</h3>

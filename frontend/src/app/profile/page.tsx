@@ -47,7 +47,7 @@ export default function ProfilePage() {
       return
     }
 
-    if (password && !currentPassword) {
+    if (password && user?.has_password && !currentPassword) {
       showToast("Current password is required to set a new password", "error")
       return
     }
@@ -208,19 +208,21 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="currentPassword" className="text-sm font-medium text-foreground">
-                    Current Password {password && <span className="text-destructive">*</span>}
-                  </label>
-                  <input
-                    id="currentPassword"
-                    type="password"
-                    placeholder={password ? "Required to change password" : "Only required if changing password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
+                {user?.has_password && (
+                  <div className="space-y-2">
+                    <label htmlFor="currentPassword" className="text-sm font-medium text-foreground">
+                      Current Password {password && <span className="text-destructive">*</span>}
+                    </label>
+                    <input
+                      id="currentPassword"
+                      type="password"
+                      placeholder={password ? "Required to change password" : "Only required if changing password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label htmlFor="password" className="text-sm font-medium text-foreground">

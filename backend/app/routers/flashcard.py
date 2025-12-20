@@ -70,7 +70,6 @@ async def generate_flashcards(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        # Generate flashcards from the input text using the AI model
         flashcards_data = await generate_flashcards_with_groq(
             text=request.text,
             count=request.count,
@@ -86,7 +85,6 @@ async def generate_flashcards(
             )
 
 
-        # Determine the target deck
         if request.deck_id:
             deck = await db.scalar(
                 select(Deck).where(Deck.id == request.deck_id, Deck.user_id == current_user.id)
@@ -94,7 +92,6 @@ async def generate_flashcards(
             if not deck:
                 raise HTTPException(status_code=404, detail="Target deck not found")
         else:
-            # Create a new deck
             deck_uuid = str(uuid4())[:8]
             deck_name = f"Deck_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{deck_uuid}"
             summary = flashcards_data.get("summary", "")
@@ -112,20 +109,18 @@ async def generate_flashcards(
             await db.refresh(deck)
         
 
-        # Store flashcards in this new deck
         for card in flashcards_data["cards"]:
             question = card.get("question")
             answer = card.get("answer")
 
-            # Handle multiple-choice question format
             if "options" in card and "correct_answer" in card:
-                answer = card["correct_answer"]  # Store just the letter (A, B, C, D)
+                answer = card["correct_answer"]
 
             new_flashcard = Flashcard(
                 id=uuid4(),
                 question=question,
                 answer=answer,
-                options=card.get("options"),  # Store options for multiple choice
+                options=card.get("options"),
                 deck_id=deck.id,
                 user_id=current_user.id,
                 created_at=datetime.now(timezone.utc)
@@ -188,7 +183,6 @@ async def upload_file_for_flashcards(
                 )
 
 
-            # Determine the target deck
             if deck_id:
                 deck = await db.scalar(
                     select(Deck).where(Deck.id == deck_id, Deck.user_id == current_user.id)
@@ -196,7 +190,6 @@ async def upload_file_for_flashcards(
                 if not deck:
                     raise HTTPException(status_code=404, detail="Target deck not found")
             else:
-                # Create a new deck
                 deck_uuid = str(uuid4())[:8]
                 deck_name = f"Deck_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{deck_uuid}"
                 summary = result.get("summary", "")
@@ -232,7 +225,6 @@ async def upload_file_for_flashcards(
                 question = card.get("question")
                 answer = card.get("answer")
 
-                # Handle multiple-choice question format
                 if "options" in card and "correct_answer" in card:
                     answer = card["correct_answer"]
 
@@ -240,7 +232,7 @@ async def upload_file_for_flashcards(
                     id=uuid4(),
                     question=question,
                     answer=answer,
-                    options=card.get("options"),  # Store options for multiple choice
+                    options=card.get("options"),
                     deck_id=deck.id,
                     user_id=current_user.id,
                     created_at=datetime.now(timezone.utc)

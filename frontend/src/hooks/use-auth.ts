@@ -17,6 +17,7 @@ interface UseAuthReturn {
   resetPassword: (token: string, password: string) => Promise<void>
   verifyEmail: (token: string) => Promise<void>
   resendVerification: (email: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
 }
 
 export function useAuth(): UseAuthReturn {
@@ -181,6 +182,23 @@ export function useAuth(): UseAuthReturn {
     }
   }, [])
 
+  const loginWithGoogle = useCallback(async (credential: string) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      await apiClient.loginWithGoogle(credential)
+      const profile = await apiClient.getProfile()
+      setUser(profile)
+      setIsAuthenticated(true)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Google login failed"
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   return {
     user,
     isLoading,
@@ -195,5 +213,6 @@ export function useAuth(): UseAuthReturn {
     resetPassword,
     verifyEmail,
     resendVerification,
+    loginWithGoogle,
   }
 }

@@ -11,6 +11,8 @@ from ..services.mail import send_reset_email, send_verification_email
 from datetime import timedelta
 from ..core.security import ACCESS_TOKEN_EXPIRE_MINUTES
 from ..core.config import settings
+from google.oauth2 import id_token
+from google.auth.transport import requests
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,7 +33,6 @@ async def register_user(user: schemas.UserCreate, db: AsyncSession = Depends(get
     await db.commit()
     await db.refresh(new_user)
 
-    # send verification email automatically on registration
     token = create_verification_token(email)
     verify_link = f"{settings.frontend_url}/auth/verify-email?token={token}"
     
@@ -39,15 +40,12 @@ async def register_user(user: schemas.UserCreate, db: AsyncSession = Depends(get
         await send_verification_email(email, verify_link)
         message = "User registered successfully. Please check your email for verification."
     except Exception as e:
-        # Log the error but don't fail registration
         logger.error(f"Error sending verification email: {str(e)}")
         message = "User registered successfully, but verification email failed to send. You can verify your email later."
 
-    # Generate access token for auto-login
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token({"sub": str(new_user.id)}, expires_delta=access_token_expires)
 
-    # Attach message and token to response object
     user_data = schemas.UserResponse.model_validate(new_user).model_dump()
     
     return {
@@ -67,18 +65,56 @@ async def login_user(form_data: schemas.UserLogin, db: AsyncSession = Depends(ge
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     if not user.is_verified:
-        '''
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please verify your email before logging inn."
+            detail="Please verify your email before logging in."
         )
-        '''
-        pass
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token({"sub": str(user.id)}, expires_delta=access_token_expires)
 
-    return {"access_token": access_token, "token_type": "bearer"} 
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/google")
+async def google_login(data: schemas.GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            data.credential, 
+            requests.Request(), 
+            settings.google_client_id
+        )
+
+        email = idinfo['email'].lower()
+        name = idinfo.get('name', email.split('@')[0])
+        
+        user = await db.scalar(select(models.User).where(models.User.email == email))
+        
+        if not user:
+            user = models.User(
+                name=name, 
+                email=email, 
+                password=None,
+                is_verified=True
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        elif not user.is_verified:
+            user.is_verified = True
+            await db.commit()
+            await db.refresh(user)
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token({"sub": str(user.id)}, expires_delta=access_token_expires)
+
+        return {"access_token": access_token, "token_type": "bearer"}
+    
+    except ValueError as e:
+        logger.error(f"Google login error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="An error occurred while logging in with Google")
+    except Exception as e:
+        logger.error(f"Google login unexpected error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while logging in with Google")
 
 
 @router.put("/change-password")

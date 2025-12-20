@@ -39,10 +39,14 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     current_password: Optional[str] = None
 
+class GoogleLoginRequest(BaseModel):
+    credential: str
+
 class UserResponse(UserBase):
     id: UUID
     is_verified: bool
     created_at: datetime
+    has_password: bool
     message: Optional[str] = None
 
     model_config = {"from_attributes": True}

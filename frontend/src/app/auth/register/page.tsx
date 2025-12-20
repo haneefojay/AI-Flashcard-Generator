@@ -9,15 +9,27 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
 import { Brain } from "lucide-react"
+import { GoogleLogin } from "@react-oauth/google"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { register, isLoading, error } = useAuth()
+  const { register, loginWithGoogle, isLoading, error } = useAuth()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [localError, setLocalError] = useState("")
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      if (credentialResponse.credential) {
+        await loginWithGoogle(credentialResponse.credential)
+        router.push("/generate")
+      }
+    } catch (err) {
+      setLocalError("Google sign-in failed. Please try again.")
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,6 +139,22 @@ export default function RegisterPage() {
                 {isLoading ? "Creating account..." : "Sign Up"}
               </Button>
             </form>
+
+            <div className="mt-6 flex items-center gap-2">
+              <div className="flex-1 border-t border-border"></div>
+              <span className="text-xs text-muted-foreground uppercase">Or continue with</span>
+              <div className="flex-1 border-t border-border"></div>
+            </div>
+
+            <div className="mt-8 flex justify-center w-full [&>div]:w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setLocalError("Google sign-in failed")}
+                useOneTap
+                theme="outline"
+                shape="rectangular"
+              />
+            </div>
 
             <div className="mt-6 text-sm text-center text-muted-foreground">
               Already have an account?{" "}

@@ -23,10 +23,12 @@ interface GenerateFlashcardsRequest {
 
 interface GenerateFlashcardsResponse {
   cards: Flashcard[]
+  summary?: string
 }
 
 interface UploadFlashcardsResponse {
   cards: Flashcard[]
+  summary?: string
 }
 
 interface HealthResponse {
@@ -55,6 +57,7 @@ interface UserProfile {
   email: string
   name: string
   is_verified: boolean
+  has_password: boolean
   created_at: string
 }
 
@@ -313,6 +316,27 @@ class ApiClient {
       return result
     } catch (error) {
       console.error("Login error:", error)
+      throw error
+    }
+  }
+
+  async loginWithGoogle(credential: string): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+      })
+
+      if (!response.ok) {
+        await this.parseErrorResponse(response, "Google sign-in failed")
+      }
+
+      const result = await response.json()
+      this.setToken(`${result.token_type} ${result.access_token}`)
+      return result
+    } catch (error) {
+      console.error("Google login error:", error)
       throw error
     }
   }

@@ -40,7 +40,6 @@ async def generate_flashcards_with_groq(
 
     """
     
-    # ... (the rest of the prompt logic remains the same)
     if mode == "multiple_choice":
         base_prompt += """
         For each flashcard, generate:
@@ -104,12 +103,10 @@ async def generate_flashcards_with_groq(
                 {"role": "user", "content": base_prompt},
             ],
             temperature=0.7,
-            max_tokens=2000 # Increased max_tokens slightly for larger outputs
+            max_tokens=2000
         )
 
         raw_output = response.choices[0].message.content.strip()
-
-        # Handle potential markdown code blocks in the output
         if raw_output.startswith("```json"):
             raw_output = raw_output[7:-3].strip()
         elif raw_output.startswith("```"):

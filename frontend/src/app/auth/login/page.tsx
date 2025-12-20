@@ -9,13 +9,27 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
 import { Brain } from "lucide-react"
+import { GoogleLogin } from "@react-oauth/google"
+import { useToast } from "@/components/ui/toast"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, isLoading, error } = useAuth()
+  const { login, loginWithGoogle, resendVerification, isLoading, error } = useAuth()
+  const { showToast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [localError, setLocalError] = useState("")
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      if (credentialResponse.credential) {
+        await loginWithGoogle(credentialResponse.credential)
+        router.push("/generate")
+      }
+    } catch (err) {
+      setLocalError("Google sign-in failed. Please try again.")
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +45,16 @@ export default function LoginPage() {
       router.push("/generate")
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Login failed")
+    }
+  }
+
+  const handleResendVerification = async () => {
+    try {
+      await resendVerification(email)
+      showToast("Verification email sent! Please check your inbox.", "success")
+      setLocalError("")
+    } catch (err) {
+      showToast("Failed to resend verification email.", "error")
     }
   }
 
@@ -78,8 +102,19 @@ export default function LoginPage() {
               </div>
 
               {(error || localError) && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
-                  {error || localError}
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm flex flex-col gap-2">
+                  <p>{error || localError}</p>
+                  {(error?.toLowerCase().includes("verify") || localError.toLowerCase().includes("verify")) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full bg-background border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={handleResendVerification}
+                    >
+                      Resend Verification Email
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -88,12 +123,28 @@ export default function LoginPage() {
               </Button>
             </form>
 
+            <div className="mt-6 flex items-center gap-2">
+              <div className="flex-1 border-t border-border"></div>
+              <span className="text-xs text-muted-foreground uppercase">Or continue with</span>
+              <div className="flex-1 border-t border-border"></div>
+            </div>
+
+            <div className="mt-6 flex justify-center w-full [&>div]:w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setLocalError("Google sign-in failed")}
+                useOneTap
+                theme="outline"
+                shape="rectangular"
+              />
+            </div>
+
             <div className="mt-6 space-y-3 text-sm text-center">
               <Link href="/auth/forgot-password" className="text-primary hover:underline block">
                 Forgot password?
               </Link>
               <div className="text-muted-foreground">
-                Don`&apos;`t have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link href="/auth/register" className="text-primary hover:underline">
                   Sign up
                 </Link>

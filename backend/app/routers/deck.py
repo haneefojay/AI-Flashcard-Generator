@@ -63,7 +63,6 @@ async def get_deck(
             detail="Deck not found"
         )
     
-    # Get card count separately for single deck
     count_query = await db.execute(
         select(func.count(models.Flashcard.id)).where(models.Flashcard.deck_id == deck_id)
     )
@@ -98,7 +97,6 @@ async def update_deck(
     await db.commit()
     await db.refresh(deck)
     
-    # Calculate card count for the response
     count_query = await db.execute(
         select(func.count(models.Flashcard.id)).where(models.Flashcard.deck_id == deck_id)
     )
@@ -165,7 +163,6 @@ async def get_shared_deck(share_id: str, db: AsyncSession = Depends(get_db)):
     if not deck:
         raise HTTPException(status_code=404, detail="Shared deck not found")
         
-    # Get card count
     count_query = await db.execute(
         select(func.count(models.Flashcard.id)).where(models.Flashcard.deck_id == deck.id)
     )
