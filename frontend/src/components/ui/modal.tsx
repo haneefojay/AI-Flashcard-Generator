@@ -117,7 +117,7 @@ export function Modal({
                             {cancelText}
                         </Button>
                         <Button
-                            variant={type === "danger" ? "destructive" : "primary"}
+                            variant={type === "danger" ? "destructive" : "default"}
                             onClick={() => {
                                 if (onConfirm) onConfirm()
                                 else onClose()
