@@ -3,14 +3,6 @@
  * Supports multiple error response formats and provides user-friendly messages
  */
 
-interface ErrorResponse {
-  detail?: string | { msg?: string; type?: string }[]
-  message?: string
-  error?: string
-  errors?: Array<{ msg?: string; field?: string }>
-  msg?: string
-}
-
 export class ApiError extends Error {
   constructor(
     public statusCode: number,
@@ -26,39 +18,37 @@ export class ApiError extends Error {
  * Parse error response from backend and extract message
  * Only returns errors provided by the backend, no hardcoded frontend messages
  */
-export function parseErrorResponse(response: Response, data: any): string {
+export function parseErrorResponse(response: Response, data: unknown): string {
+  const d = data as Record<string, unknown> | null | undefined
+
   // Handle validation errors (422) - extract detailed error messages
-  if (response.status === 422) {
-    if (Array.isArray(data?.detail)) {
-      const messages = data.detail
-        .map((err: any) => {
-          if (typeof err === "object" && err.msg) {
-            return err.msg
-          }
-          return null
-        })
-        .filter(Boolean)
-      if (messages.length > 0) {
-        return messages.join(", ")
-      }
-    }
-    if (typeof data?.detail === "string") {
-      return data.detail
+  if (response.status === 422 && d && Array.isArray(d.detail)) {
+    const messages = d.detail
+      .map((err: unknown) => {
+        if (typeof err === "object" && err !== null && "msg" in err) {
+          return (err as { msg: string }).msg
+        }
+        return null
+      })
+      .filter((msg): msg is string => msg !== null)
+
+    if (messages.length > 0) {
+      return messages.join(", ")
     }
   }
 
   // Try to extract message from various response formats
-  if (typeof data?.detail === "string") {
-    return data.detail
+  if (d && typeof d.detail === "string") {
+    return d.detail
   }
-  if (typeof data?.message === "string") {
-    return data.message
+  if (d && typeof d.message === "string") {
+    return d.message
   }
-  if (typeof data?.error === "string") {
-    return data.error
+  if (d && typeof d.error === "string") {
+    return d.error
   }
-  if (typeof data?.msg === "string") {
-    return data.msg
+  if (d && typeof d.msg === "string") {
+    return d.msg
   }
 
   // Fallback: return status code if no error message from backend
@@ -86,10 +76,11 @@ export function handleFetchError(error: unknown): string {
 /**
  * Validate response data structure
  */
-export function validateResponseData(data: any, expectedFields: string[]): boolean {
+export function validateResponseData(data: unknown, expectedFields: string[]): boolean {
   if (!data || typeof data !== "object") {
     return false
   }
 
-  return expectedFields.every((field) => field in data)
+  const d = data as Record<string, unknown>
+  return expectedFields.every((field) => field in d)
 }
