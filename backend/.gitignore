@@ -10,5 +10,3 @@ ENV/
 *.log
 tmp/
 .DS_Store
-alembic/
-alembic.ini
