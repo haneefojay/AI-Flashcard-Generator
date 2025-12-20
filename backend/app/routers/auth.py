@@ -79,14 +79,41 @@ async def login_user(form_data: schemas.UserLogin, db: AsyncSession = Depends(ge
 @router.post("/google")
 async def google_login(data: schemas.GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
     try:
-        idinfo = id_token.verify_oauth2_token(
-            data.credential, 
-            requests.Request(), 
-            settings.google_client_id
-        )
-
-        email = idinfo['email'].lower()
-        name = idinfo.get('name', email.split('@')[0])
+        email = None
+        name = None
+        
+        # First try to verify as an ID token
+        try:
+            idinfo = id_token.verify_oauth2_token(
+                data.credential, 
+                requests.Request(), 
+                settings.google_client_id
+            )
+            email = idinfo['email'].lower()
+            name = idinfo.get('name', email.split('@')[0])
+        except ValueError:
+            # If ID token verification fails, treat it as an access token
+            # and fetch user info from Google's userinfo API
+            import httpx
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {data.credential}"}
+                )
+                if response.status_code != 200:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED, 
+                        detail="Invalid Google token"
+                    )
+                userinfo = response.json()
+                email = userinfo['email'].lower()
+                name = userinfo.get('name', email.split('@')[0])
+        
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Could not retrieve email from Google"
+            )
         
         user = await db.scalar(select(models.User).where(models.User.email == email))
         
@@ -104,14 +131,14 @@ async def google_login(data: schemas.GoogleLoginRequest, db: AsyncSession = Depe
             user.is_verified = True
             await db.commit()
             await db.refresh(user)
+            
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token({"sub": str(user.id)}, expires_delta=access_token_expires)
 
         return {"access_token": access_token, "token_type": "bearer"}
     
-    except ValueError as e:
-        logger.error(f"Google login error: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="An error occurred while logging in with Google")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Google login unexpected error: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while logging in with Google")
