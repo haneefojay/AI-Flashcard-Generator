@@ -7,6 +7,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.core.security import get_current_user
 from app.models import Deck, Flashcard
+from app.core.settings import settings
 
 
 router = APIRouter(prefix="/decks", tags=["Decks"])
@@ -143,7 +144,7 @@ async def share_deck(
         await db.commit()
         await db.refresh(deck)
     
-    share_url = f"http://localhost:3000/share/deck/{deck.shared_link}"
+    share_url = f"{settings.frontend_url}/share/deck/{deck.shared_link}"
     
     return {"deck_id": deck.id, "share_url": share_url}
 
