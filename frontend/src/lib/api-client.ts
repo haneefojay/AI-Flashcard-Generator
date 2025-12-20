@@ -1,7 +1,16 @@
 
 interface Flashcard {
+  id: string
   question: string
-  answer: string
+  answer?: string
+  options?: {
+    A: string
+    B: string
+    C: string
+    D: string
+  }
+  correct_answer?: string
+  deck_id: string
 }
 
 interface GenerateFlashcardsRequest {
@@ -9,6 +18,7 @@ interface GenerateFlashcardsRequest {
   count?: number
   question_mode?: "multiple_choice" | "open-ended"
   difficulty?: "beginner" | "intermediate" | "advanced"
+  deck_id?: string
 }
 
 interface GenerateFlashcardsResponse {
@@ -44,18 +54,21 @@ interface UserProfile {
   id: string
   email: string
   name: string
+  is_verified: boolean
   created_at: string
 }
 
 interface UpdateProfileRequest {
   name?: string
   password?: string
+  current_password?: string
 }
 
 interface Deck {
   id: string
   name: string
   description?: string
+  summary?: string
   created_at: string
   updated_at: string
   card_count: number
@@ -141,25 +154,25 @@ class ApiClient {
     }
   }
 
-  
+
 
   async generateFlashcards(
     text: string,
     count?: number,
     questionMode?: "multiple_choice" | "open-ended" | "true_false",
     difficulty?: "beginner" | "intermediate" | "advanced",
+    deckId?: string,
   ): Promise<GenerateFlashcardsResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/flashcards/generate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           text,
           count,
           question_mode: questionMode,
           difficulty,
+          deck_id: deckId,
         } as GenerateFlashcardsRequest),
       })
 
@@ -194,6 +207,7 @@ class ApiClient {
     count?: number,
     questionMode?: "multiple_choice" | "open-ended" | "true_false",
     difficulty?: "beginner" | "intermediate" | "advanced",
+    deckId?: string,
   ): Promise<UploadFlashcardsResponse> {
     try {
       const formData = new FormData()
@@ -201,9 +215,16 @@ class ApiClient {
       if (count) formData.append("count", count.toString())
       if (questionMode) formData.append("question_mode", questionMode)
       if (difficulty) formData.append("difficulty", difficulty)
+      if (deckId) formData.append("deck_id", deckId)
+
+      const headers: Record<string, string> = {}
+      if (this.token) {
+        headers["Authorization"] = this.token
+      }
 
       const response = await fetch(`${this.baseUrl}/flashcards/upload`, {
         method: "POST",
+        headers,
         body: formData,
       })
 
@@ -233,6 +254,24 @@ class ApiClient {
     }
   }
 
+  async getFlashcards(deckId: string): Promise<Flashcard[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/flashcards/${deckId}`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch flashcards")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Get flashcards error:", error)
+      throw error
+    }
+  }
+
   async register(data: RegisterRequest): Promise<AuthResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/auth/register`, {
@@ -247,7 +286,8 @@ class ApiClient {
       }
 
       const result = await response.json()
-      this.setToken(result.access_token)
+      // Store both token and type (the backend returns token_type: "bearer")
+      this.setToken(`${result.token_type} ${result.access_token}`)
       return result
     } catch (error) {
       console.error("Register error:", error)
@@ -415,6 +455,24 @@ class ApiClient {
     }
   }
 
+  async resendVerification(email: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        return this.parseErrorResponse(response, "Failed to resend verification email")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Resend verification error:", error)
+      throw error
+    }
+  }
+
   async listDecks(): Promise<Deck[]> {
     try {
       const response = await fetch(`${this.baseUrl}/decks`, {
@@ -427,7 +485,7 @@ class ApiClient {
       }
 
       const data = await response.json()
-      return data.decks || []
+      return data || []
     } catch (error) {
       console.error("List decks error:", error)
       throw error
@@ -527,7 +585,7 @@ class ApiClient {
   async shareDeck(deckId: string): Promise<{ share_url: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/decks/${deckId}/share`, {
-        method: "GET",
+        method: "POST",
         headers: this.getAuthHeaders(),
       })
 
@@ -538,6 +596,40 @@ class ApiClient {
       return await response.json()
     } catch (error) {
       console.error("Share deck error:", error)
+      throw error
+    }
+  }
+
+  async getSharedDeck(shareId: string): Promise<Deck> {
+    try {
+      const response = await fetch(`${this.baseUrl}/decks/share/${shareId}`, {
+        method: "GET",
+      })
+
+      if (!response.ok) {
+        throw new Error("Shared deck not found")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Get shared deck error:", error)
+      throw error
+    }
+  }
+
+  async getSharedFlashcards(shareId: string): Promise<Flashcard[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/flashcards/share/${shareId}`, {
+        method: "GET",
+      })
+
+      if (!response.ok) {
+        throw new Error("Shared flashcards not found")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Get shared flashcards error:", error)
       throw error
     }
   }

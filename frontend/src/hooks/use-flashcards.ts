@@ -12,12 +12,14 @@ interface UseFlashcardsReturn {
     count?: number,
     questionMode?: "multiple_choice" | "open-ended" | "true_false",
     difficulty?: "beginner" | "intermediate" | "advanced",
+    deckId?: string,
   ) => Promise<void>
   uploadFileForFlashcards: (
     file: File,
     count?: number,
     questionMode?: "multiple_choice" | "open-ended" | "true_false",
     difficulty?: "beginner" | "intermediate" | "advanced",
+    deckId?: string,
   ) => Promise<void>
   clearFlashcards: () => void
   clearError: () => void
@@ -31,8 +33,9 @@ export function useFlashcards(): UseFlashcardsReturn {
   const generateFlashcards = async (
     text: string,
     count?: number,
-    questionMode?: "multiple_choice" | "open-ended",
+    questionMode?: "multiple_choice" | "open-ended" | "true_false",
     difficulty?: "beginner" | "intermediate" | "advanced",
+    deckId?: string,
   ) => {
     if (!text.trim()) {
       setError("Please enter some text to generate flashcards.")
@@ -43,7 +46,7 @@ export function useFlashcards(): UseFlashcardsReturn {
     setError(null)
 
     try {
-      const response = await apiClient.generateFlashcards(text, count, questionMode, difficulty)
+      const response = await apiClient.generateFlashcards(text, count, questionMode, difficulty, deckId)
       setFlashcards(response.cards)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate flashcards")
@@ -56,14 +59,15 @@ export function useFlashcards(): UseFlashcardsReturn {
   const uploadFileForFlashcards = async (
     file: File,
     count?: number,
-    questionMode?: "multiple_choice" | "open-ended",
+    questionMode?: "multiple_choice" | "open-ended" | "true_false",
     difficulty?: "beginner" | "intermediate" | "advanced",
+    deckId?: string,
   ) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await apiClient.uploadFileForFlashcards(file, count, questionMode, difficulty)
+      const response = await apiClient.uploadFileForFlashcards(file, count, questionMode, difficulty, deckId)
       setFlashcards(response.cards)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process uploaded file")

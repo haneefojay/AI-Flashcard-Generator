@@ -7,11 +7,16 @@ from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = f"postgresql+asyncpg://{settings.database_username}:{settings.database_password}@{settings.database_hostname}:{settings.database_port}/{settings.database_name}"
+
+database_url = settings.database_url
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif not database_url.startswith("postgresql+asyncpg://"):
+    pass
 
 # Configure the engine with connection pooling and timeouts
 engine = create_async_engine(
-    DATABASE_URL,
+    database_url,
     echo=False,  # Set to False in production
     future=True,
 )

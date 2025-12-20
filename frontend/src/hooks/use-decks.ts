@@ -11,7 +11,7 @@ interface UseDecksReturn {
   updateDeck: (deckId: string, data: { name?: string; description?: string }) => Promise<Deck>
   deleteDeck: (deckId: string) => Promise<void>
   fetchDecks: () => Promise<void>
-  exportDeck: (deckId: string) => Promise<void>
+  exportDeck: (deckId: string, name?: string) => Promise<void>
   shareDeck: (deckId: string) => Promise<string>
 }
 
@@ -39,7 +39,7 @@ export function useDecks(): UseDecksReturn {
       setIsLoading(true)
       setError(null)
       const newDeck = await apiClient.createDeck(data)
-      setDecks((prev) => [...prev, newDeck])
+      setDecks((prev) => [newDeck, ...prev])
       return newDeck
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create deck"
@@ -84,7 +84,7 @@ export function useDecks(): UseDecksReturn {
     }
   }, [])
 
-  const exportDeck = useCallback(async (deckId: string) => {
+  const exportDeck = useCallback(async (deckId: string, name?: string) => {
     try {
       setIsLoading(true)
       setError(null)
@@ -92,7 +92,8 @@ export function useDecks(): UseDecksReturn {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `deck-${deckId}.pdf`
+      const fileName = name ? `${name.replace(/\s+/g, "_")}_Flashcards.pdf` : `deck-${deckId}.pdf`
+      a.download = fileName
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)

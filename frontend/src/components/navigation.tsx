@@ -43,8 +43,10 @@ export function Navigation() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-foreground",
-                  pathname === item.href ? "text-foreground" : "text-muted-foreground",
+                  "text-sm font-medium transition-colors hover:text-foreground relative py-1",
+                  pathname === item.href
+                    ? "text-foreground after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-full"
+                    : "text-muted-foreground",
                 )}
               >
                 {item.name}
@@ -119,30 +121,37 @@ export function Navigation() {
                   <div className="h-9 bg-muted rounded-md animate-pulse" />
                 ) : isAuthenticated ? (
                   <>
-                    <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
-                      <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
-                        <User className="h-4 w-4" />
-                        {user?.name || "Profile"}
-                      </Button>
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="h-4 w-4" />
+                      {user?.name || "Profile"}
                     </Link>
-                    <Button
+                    <button
                       onClick={handleLogout}
-                      variant="outline"
-                      className="w-full justify-start gap-2 bg-transparent"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
                       Logout
-                    </Button>
+                    </button>
                   </>
                 ) : (
                   <>
-                    <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
-                      <Button variant="outline" className="w-full bg-transparent">
-                        Sign In
-                      </Button>
+                    <Link
+                      href="/auth/login"
+                      className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sign In
                     </Link>
-                    <Link href="/auth/register" onClick={() => setIsMenuOpen(false)}>
-                      <Button className="w-full">Sign Up</Button>
+                    <Link
+                      href="/auth/register"
+                      className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sign Up
                     </Link>
                   </>
                 )}

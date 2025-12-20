@@ -14,7 +14,8 @@ conf = ConnectionConfig(
     MAIL_FROM_NAME=settings.mail_from_name,
     MAIL_STARTTLS=settings.mail_starttls,
     MAIL_SSL_TLS=settings.mail_ssl_tls,
-    USE_CREDENTIALS=settings.use_credentials
+    USE_CREDENTIALS=settings.use_credentials,
+    SUPPRESS_SEND=settings.mail_suppress_send
 )
 
 
@@ -23,7 +24,7 @@ env = Environment(loader=FileSystemLoader(templates_dir))
 
 from typing import Optional
 import logging
-import aioredis
+from redis import asyncio as redis
 from email_validator import validate_email, EmailNotValidError
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ async def validate_email_address(email: str) -> bool:
     except EmailNotValidError:
         return False
 
-async def check_rate_limit(email: str, redis_client: Optional[aioredis.Redis] = None) -> bool:
+async def check_rate_limit(email: str, redis_client: Optional[redis.Redis] = None) -> bool:
     """Check if email has exceeded rate limit."""
     if not redis_client:
         return True  # Skip rate limiting if Redis not available

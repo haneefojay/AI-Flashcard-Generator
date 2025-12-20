@@ -16,11 +16,7 @@ class Settings(BaseSettings):
     
     groq_api_key: str    
     
-    database_hostname: str
-    database_port: str
-    database_password: str
-    database_name: str
-    database_username: str
+    database_url: str
     
     secret_key: str
     algorithm: str
@@ -38,6 +34,7 @@ class Settings(BaseSettings):
     use_credentials: bool = True
     mail_starttls: bool = True
     mail_ssl_tls: bool = False
+    mail_suppress_send: bool = False
     frontend_url: str = "http://localhost:3000"
     
     verify_token_expire_minutes: int

@@ -14,26 +14,23 @@ from ..models import Deck, Flashcard, User
 from app.core.security import get_current_user
 from ..database import get_db
 
-router = APIRouter(prefix="/deck", tags=["Export Deck"])
+from uuid import UUID
+
+router = APIRouter(prefix="/decks", tags=["Export Deck"])
 
 @router.get("/{deck_id}/export")
 async def export_deck(
-    deck_id: str,
+    deck_id: UUID,
     format: str = "pdf",
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not current_user.is_premium:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This feature is only available for premium users"
-        )
     
-    # Fetch deck
-    deck_result = await db.execute(select(Deck).where(Deck.id == deck_id))
+    # Fetch deck and verify ownership
+    deck_result = await db.execute(select(Deck).where(Deck.id == deck_id, Deck.user_id == current_user.id))
     deck = deck_result.scalar_one_or_none()
     if not deck:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deck not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deck not found or access denied")
 
     # Fetch flashcards
     flashcards_result = await db.execute(select(Flashcard).where(Flashcard.deck_id == deck_id))
@@ -45,75 +42,112 @@ async def export_deck(
         doc = SimpleDocTemplate(
             buffer,
             pagesize=letter,
-            rightMargin=40, leftMargin=40,
-            topMargin=60, bottomMargin=40,
+            rightMargin=50, leftMargin=50,
+            topMargin=50, bottomMargin=50,
             title=f"{deck.name} - Flashcards"
         )
 
         styles = getSampleStyleSheet()
+        
+        # Define Custom Styles
         title_style = ParagraphStyle(
             "TitleStyle",
             parent=styles["Title"],
-            fontSize=22,
-            textColor=colors.HexColor("#1f77b4"),
-            spaceAfter=20
+            fontSize=24,
+            textColor=colors.HexColor("#2563eb"), # Premium blue
+            spaceAfter=15,
+            alignment=1 # Center
         )
-        normal_style = ParagraphStyle(
-            "NormalStyle",
+        
+        meta_style = ParagraphStyle(
+            "MetaStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=colors.gray,
+            spaceAfter=20,
+            alignment=1
+        )
+
+        label_style = ParagraphStyle(
+            "LabelStyle",
             parent=styles["Normal"],
             fontSize=12,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#1e40af"),
+            spaceBefore=15,
+            spaceAfter=5,
+        )
+
+        content_style = ParagraphStyle(
+            "ContentStyle",
+            parent=styles["Normal"],
+            fontSize=11,
+            leading=14,
+            leftIndent=15,
             spaceAfter=10,
         )
 
-        # Start document content
-        story = []
+        footer_style = ParagraphStyle(
+            "FooterStyle",
+            parent=styles["Normal"],
+            fontSize=9,
+            textColor=colors.gray,
+            alignment=1,
+            spaceBefore=30
+        )
 
-        # === APP LOGO ===
-        try:
-            # You can use your own hosted logo or static path
-            
-            story.append(Image(logo_path, width=100, height=50))
-        except Exception:
-            pass
+        story = []
 
         # === Title and Meta ===
         story.append(Paragraph(f"{deck.name}", title_style))
         if deck.description:
-            story.append(Paragraph(deck.description, normal_style))
+            desc_style = ParagraphStyle("Desc", parent=styles["Normal"], alignment=1, spaceAfter=10, italic=True)
+            story.append(Paragraph(deck.description, desc_style))
 
         story.append(Paragraph(
-            f"Exported by: <b>{current_user.name}</b> ({current_user.email})<br/>"
-            f"Export Date: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}",
-            ParagraphStyle("MetaStyle", fontSize=10, textColor=colors.gray, spaceAfter=20)
+            f"Exported by: <b>{current_user.name}</b> | Date: {datetime.now().strftime('%B %d, %Y')}",
+            meta_style
         ))
+        
+        story.append(Spacer(1, 10))
 
-        # === Table Header ===
-        table_data = [["#", "Question", "Answer"]]
+        # === Flashcards Content ===
         for i, f in enumerate(flashcards, start=1):
-            table_data.append([str(i), f.question, f.answer])
+            # Card Header
+            story.append(Paragraph(f"Flashcard {i}", ParagraphStyle("Idx", parent=label_style, fontSize=14, textColor=colors.black, spaceBefore=20)))
+            
+            # Question Section
+            story.append(Paragraph("Question:", label_style))
+            story.append(Paragraph(f.question, content_style))
+            
+            # Handle Multiple Choice Options
+            if f.options:
+                for opt_key, opt_val in f.options.items():
+                    opt_text = f"<b>{opt_key}:</b> {opt_val}"
+                    story.append(Paragraph(opt_text, ParagraphStyle("Opt", parent=content_style, leftIndent=30, spaceAfter=2)))
+            
+            # Answer Section
+            story.append(Paragraph("Answer:", label_style))
+            
+            # Handle MCQ answer display (show full text if it's an option key)
+            final_answer = f.answer or ""
+            if f.options and f.answer in f.options:
+                final_answer = f"({f.answer}) {f.options[f.answer]}"
+            
+            story.append(Paragraph(final_answer, ParagraphStyle("Ans", parent=content_style, textColor=colors.HexColor("#16a34a")))) # Green for answer
+            
+            # Subtle Separator
+            from reportlab.platypus import HRFlowable
+            story.append(HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey, spaceBefore=10, spaceAfter=5))
 
-        # === Table Styling ===
-        table = Table(table_data, colWidths=[30, 220, 220])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1f77b4")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.gray),
-            ('BOX', (0, 0), (-1, -1), 0.5, colors.gray),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey]),
-        ]))
-        story.append(table)
-
-        story.append(Spacer(1, 20))
-        story.append(Paragraph("Generated by FlashAI Assistant", ParagraphStyle(
-            "FooterStyle", fontSize=9, textColor=colors.HexColor("#777777"), alignment=1
-        )))
+        # === Footer ===
+        story.append(Paragraph("Generated by FlashAI Assistant - Enhance Your Learning", footer_style))
 
         doc.build(story)
         buffer.seek(0)
 
-        headers = {"Content-Disposition": f"attachment; filename={deck.name}_deck.pdf"}
+        filename = f"{deck.name.replace(' ', '_')}_Flashcards.pdf"
+        headers = {"Content-Disposition": f"attachment; filename={filename}"}
         return StreamingResponse(buffer, media_type="application/pdf", headers=headers)
 
     raise HTTPException(status_code=400, detail="Only PDF format customization supported for now")

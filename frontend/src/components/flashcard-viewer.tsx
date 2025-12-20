@@ -7,7 +7,14 @@ import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react"
 
 interface Flashcard {
   question: string
-  answer: string
+  answer?: string
+  options?: {
+    A: string
+    B: string
+    C: string
+    D: string
+  }
+  correct_answer?: string
 }
 
 interface FlashcardViewerProps {
@@ -24,6 +31,20 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
   }
 
   const currentCard = flashcards[currentIndex]
+
+  const getAnswerContent = () => {
+    if (currentCard.options && (currentCard.correct_answer || currentCard.answer)) {
+      const correctKey = (currentCard.correct_answer || currentCard.answer) as keyof typeof currentCard.options
+      const optionText = currentCard.options[correctKey]
+      return (
+        <div className="space-y-2">
+          <div className="text-2xl font-bold text-primary">{correctKey}</div>
+          <div className="text-lg">{optionText}</div>
+        </div>
+      )
+    }
+    return currentCard.answer || currentCard.correct_answer
+  }
 
   const handleNext = () => {
     if (currentIndex < flashcards.length - 1) {
@@ -73,9 +94,8 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
       {/* Flashcard with Flip Animation */}
       <div className="flex justify-center perspective">
         <Card
-          className={`w-full max-w-2xl h-80 cursor-pointer border-border bg-card hover:shadow-lg transition-all duration-300 ${
-            isAnimating ? "opacity-75 scale-95" : "opacity-100 scale-100"
-          }`}
+          className={`w-full max-w-2xl min-h-[24rem] h-auto cursor-pointer border-border bg-card hover:shadow-lg transition-all duration-300 ${isAnimating ? "opacity-75 scale-95" : "opacity-100 scale-100"
+            }`}
           onClick={handleFlip}
           style={{
             transform: isAnimating ? "rotateY(90deg)" : "rotateY(0deg)",
@@ -83,15 +103,38 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
             transition: "all 150ms ease-in-out",
           }}
         >
-          <CardContent className="p-8 h-full flex items-center justify-center">
-            <div className="text-center space-y-4">
+          <CardContent className="p-8 h-full flex flex-col items-center justify-center">
+            <div className="text-center space-y-6 w-full">
               <div className="text-sm font-medium text-primary uppercase tracking-wide">
                 {isFlipped ? "Answer" : "Question"}
               </div>
+
               <div className="text-lg md:text-xl text-card-foreground text-balance leading-relaxed">
-                {isFlipped ? currentCard.answer : currentCard.question}
+                {isFlipped ? (
+                  getAnswerContent()
+                ) : (
+                  <div className="space-y-6">
+                    <p className="font-semibold">{currentCard.question}</p>
+                    {currentCard.options && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 text-left">
+                        {Object.entries(currentCard.options).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="p-3 border border-border rounded-lg bg-muted/30 hover:bg-accent transition-colors flex gap-3"
+                          >
+                            <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                              {key}
+                            </span>
+                            <span className="text-sm leading-tight">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+
+              <div className="text-sm text-muted-foreground flex items-center justify-center gap-2 pt-4">
                 <RotateCcw className="h-4 w-4" />
                 Click to {isFlipped ? "see question" : "reveal answer"}
               </div>
@@ -138,11 +181,10 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
           {flashcards.map((card, index) => (
             <Card
               key={index}
-              className={`cursor-pointer border transition-all duration-200 hover:scale-105 ${
-                index === currentIndex
+              className={`cursor-pointer border transition-all duration-200 hover:scale-105 ${index === currentIndex
                   ? "border-primary bg-primary/5 shadow-md"
                   : "border-border bg-card hover:border-primary/50"
-              }`}
+                }`}
               onClick={() => {
                 setCurrentIndex(index)
                 setIsFlipped(false)

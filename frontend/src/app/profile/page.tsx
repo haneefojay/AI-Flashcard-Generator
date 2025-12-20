@@ -8,18 +8,23 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
 import { Navigation } from "@/components/navigation"
-import { LogOut, Trash2, ChevronLeft, Loader2 } from "lucide-react"
+import { LogOut, Trash2, ChevronLeft, Loader2, CheckCircle, ShieldAlert } from "lucide-react"
+import { Modal } from "@/components/ui/modal"
+import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/toast"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading, logout, updateProfile, deleteAccount } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, logout, updateProfile, deleteAccount, resendVerification } = useAuth()
+  const { showToast } = useToast()
   const [name, setName] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isResending, setIsResending] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -31,49 +36,69 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
-    setSuccess("")
 
     if (password && password !== confirmPassword) {
-      setError("Passwords do not match")
+      showToast("Passwords do not match", "error")
       return
     }
 
     if (password && password.length < 8) {
-      setError("Password must be at least 8 characters")
+      showToast("Password must be at least 8 characters", "error")
+      return
+    }
+
+    if (password && !currentPassword) {
+      showToast("Current password is required to set a new password", "error")
       return
     }
 
     try {
       setIsUpdating(true)
-      await updateProfile(name || undefined, password || undefined)
-      setSuccess("Profile updated successfully")
+      await updateProfile(name || undefined, password || undefined, currentPassword || undefined)
+      showToast("Profile updated successfully", "success")
       setPassword("")
       setConfirmPassword("")
+      setCurrentPassword("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile")
+      showToast(err instanceof Error ? err.message : "Failed to update profile", "error")
     } finally {
       setIsUpdating(false)
     }
   }
 
   const handleDeleteAccount = async () => {
-    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      try {
-        setIsDeleting(true)
-        await deleteAccount()
-        router.push("/")
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete account")
-      } finally {
-        setIsDeleting(false)
-      }
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteAccount = async () => {
+    try {
+      setIsDeleting(true)
+      await deleteAccount()
+      router.push("/")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to delete account", "error")
+      setShowDeleteModal(false)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
   const handleLogout = () => {
     logout()
     router.push("/")
+  }
+
+  const handleResendVerification = async () => {
+    if (!user?.email) return
+    try {
+      setIsResending(true)
+      await resendVerification(user.email)
+      showToast("Verification email sent! Please check your inbox.", "success")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to resend verification email", "error")
+    } finally {
+      setIsResending(false)
+    }
   }
 
   if (authLoading) {
@@ -124,6 +149,41 @@ export default function ProfilePage() {
                   {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Verification Status</label>
+                <div className="flex items-center justify-between p-3 border border-border rounded-md bg-background">
+                  <div className="flex items-center gap-2">
+                    {user?.is_verified ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm font-medium text-green-700">Verified</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldAlert className="h-4 w-4 text-amber-500" />
+                        <span className="text-sm font-medium text-amber-700">Unverified</span>
+                      </>
+                    )}
+                  </div>
+                  {!user?.is_verified && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResendVerification}
+                      disabled={isResending}
+                      className="bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary h-8"
+                    >
+                      {isResending ? "Sending..." : "Verify Email"}
+                    </Button>
+                  )}
+                </div>
+                {!user?.is_verified && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your email is not verified. Some features may be restricted.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -144,6 +204,20 @@ export default function ProfilePage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="currentPassword" className="text-sm font-medium text-foreground">
+                    Current Password {password && <span className="text-destructive">*</span>}
+                  </label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    placeholder={password ? "Required to change password" : "Only required if changing password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -175,18 +249,6 @@ export default function ProfilePage() {
                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
-
-                {error && (
-                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
-                    {error}
-                  </div>
-                )}
-
-                {success && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
-                    {success}
-                  </div>
-                )}
 
                 <Button type="submit" disabled={isUpdating} className="w-full">
                   {isUpdating ? (
@@ -251,6 +313,16 @@ export default function ProfilePage() {
           </Card>
         </div>
       </div>
+      {/* Modals */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Account"
+        description="Are you sure you want to delete your account? This action is irreversible and will permanently delete all your decks and flashcards."
+        type="danger"
+        confirmText="Yes, Delete My Account"
+        onConfirm={confirmDeleteAccount}
+      />
     </div>
   )
 }

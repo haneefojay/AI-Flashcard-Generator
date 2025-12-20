@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Form, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 import tempfile
 from app.services.file_parser import extract_text_from_file
 from app.services.ai_flashcard_generator import generate_flashcards_with_groq
@@ -7,16 +8,59 @@ from app import schemas
 import os
 from datetime import datetime, timezone
 from uuid import uuid4
+from typing import Optional
 
 from ..database import get_db
 from ..models import User, Deck, Flashcard
-from ..schemas import FlashcardsRequest, FlashcardsResponse
+from ..schemas import FlashcardsRequest, FlashcardsResponse, FlashcardResponse
 from ..core.security import get_current_user
+from typing import List
+from uuid import UUID, uuid4
 
 router = APIRouter(
     prefix="/flashcards",
     tags=["Flashcards"]
 )
+
+@router.get("/{deck_id}", response_model=List[FlashcardResponse])
+async def get_flashcards(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all flashcards for a specific deck.
+    """
+    query = await db.execute(
+        select(Flashcard).where(
+            Flashcard.deck_id == deck_id,
+            Flashcard.user_id == current_user.id
+        )
+    )
+    flashcards = query.scalars().all()
+    return flashcards
+
+
+@router.get("/share/{share_id}", response_model=List[FlashcardResponse])
+async def get_shared_flashcards(share_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Get flashcards for a shared deck.
+    """
+    deck = await db.scalar(
+        select(Deck).where(
+            Deck.shared_link == share_id,
+            Deck.is_shared == True
+        )
+    )
+    
+    if not deck:
+        raise HTTPException(status_code=404, detail="Shared deck not found")
+        
+    query = await db.execute(
+        select(Flashcard).where(Flashcard.deck_id == deck.id)
+    )
+    flashcards = query.scalars().all()
+    return flashcards
 
 
 @router.post("/generate", response_model=FlashcardsResponse)
@@ -41,26 +85,31 @@ async def generate_flashcards(
                 detail="Failed to generate flashcards"
             )
 
-        # For non-premium users, just return result
-        if not current_user.is_premium:
-            return flashcards_data
 
-        # Create unique deck
-        deck_uuid = str(uuid4())[:8]
-        deck_name = f"Deck_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{deck_uuid}"
-        summary = flashcards_data.get("summary", "")  # Get summary from AI response
-        
-        deck = Deck(
-            id=uuid4(),
-            name=deck_name,
-            summary=summary,  # Save the summary
-            user_id=current_user.id,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
-        )
-        db.add(deck)
-        await db.commit()
-        await db.refresh(deck)
+        # Determine the target deck
+        if request.deck_id:
+            deck = await db.scalar(
+                select(Deck).where(Deck.id == request.deck_id, Deck.user_id == current_user.id)
+            )
+            if not deck:
+                raise HTTPException(status_code=404, detail="Target deck not found")
+        else:
+            # Create a new deck
+            deck_uuid = str(uuid4())[:8]
+            deck_name = f"Deck_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{deck_uuid}"
+            summary = flashcards_data.get("summary", "")
+            
+            deck = Deck(
+                id=uuid4(),
+                name=deck_name,
+                summary=summary,
+                user_id=current_user.id,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
+            )
+            db.add(deck)
+            await db.commit()
+            await db.refresh(deck)
         
 
         # Store flashcards in this new deck
@@ -99,8 +148,9 @@ async def generate_flashcards(
 async def upload_file_for_flashcards(
     file: UploadFile = File(...),
     count: int = Form(10),
-    question_mode: str = Form("open_ended"),
-    difficulty: str = Form("intermidiate"),
+    question_mode: str = Form("open-ended"),
+    difficulty: str = Form("intermediate"),
+    deck_id: Optional[UUID] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -137,25 +187,31 @@ async def upload_file_for_flashcards(
                     detail="Failed to generate flashcards"
                 )
 
-            if not current_user.is_premium:
-                return result
 
-            # Create unique deck
-            deck_uuid = str(uuid4())[:8]
-            deck_name = f"Deck_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{deck_uuid}"
-            summary = result.get("summary", "")  # Get summary from AI response
-            
-            deck = Deck(
-                id=uuid4(),
-                name=deck_name,
-                summary=summary,  # Save the summary
-                user_id=current_user.id,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
-            )
-            db.add(deck)
-            await db.commit()
-            await db.refresh(deck)
+            # Determine the target deck
+            if deck_id:
+                deck = await db.scalar(
+                    select(Deck).where(Deck.id == deck_id, Deck.user_id == current_user.id)
+                )
+                if not deck:
+                    raise HTTPException(status_code=404, detail="Target deck not found")
+            else:
+                # Create a new deck
+                deck_uuid = str(uuid4())[:8]
+                deck_name = f"Deck_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{deck_uuid}"
+                summary = result.get("summary", "")
+                
+                deck = Deck(
+                    id=uuid4(),
+                    name=deck_name,
+                    summary=summary,
+                    user_id=current_user.id,
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
+                )
+                db.add(deck)
+                await db.commit()
+                await db.refresh(deck)
             
             '''
             # Store flashcards in this new deck
@@ -193,9 +249,10 @@ async def upload_file_for_flashcards(
 
             await db.commit()
             return result
-        
         except Exception as e:
             await db.rollback()
+            import logging
+            logging.getLogger(__name__).error(f"Error in upload_file_for_flashcards: {str(e)}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to generate and save flashcards: {str(e)}"

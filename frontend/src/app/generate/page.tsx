@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,8 +13,12 @@ import { useFlashcards } from "@/hooks/use-flashcards"
 import { useHealthCheck } from "@/hooks/use-health-check"
 import { Navigation } from "@/components/navigation"
 import { LoadingSpinner } from "@/components/loading-spinner"
+import { Modal } from "@/components/ui/modal"
+import Link from "next/link"
 
-export default function GeneratePage() {
+function GenerateContent() {
+  const searchParams = useSearchParams()
+  const targetDeckId = searchParams.get("deckId") || undefined
   const [inputText, setInputText] = useState("")
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -21,6 +26,7 @@ export default function GeneratePage() {
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate")
   const [cardCount, setCardCount] = useState(10)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showFileErrorModal, setShowFileErrorModal] = useState(false)
 
   const { flashcards, isLoading, error, generateFlashcards, uploadFileForFlashcards, clearFlashcards, clearError } =
     useFlashcards()
@@ -58,7 +64,7 @@ export default function GeneratePage() {
         setInputText("")
         if (error) clearError()
       } else {
-        alert("Please drop a supported file format: PDF, DOCX, TXT, or MD")
+        setShowFileErrorModal(true)
       }
     },
     [error, clearError],
@@ -84,12 +90,12 @@ export default function GeneratePage() {
   }, [])
 
   const handleGenerateFromText = async () => {
-    await generateFlashcards(inputText, cardCount, questionMode, difficulty)
+    await generateFlashcards(inputText, cardCount, questionMode, difficulty, targetDeckId)
   }
 
   const handleGenerateFromFile = async () => {
     if (uploadedFile) {
-      await uploadFileForFlashcards(uploadedFile, cardCount, questionMode, difficulty)
+      await uploadFileForFlashcards(uploadedFile, cardCount, questionMode, difficulty, targetDeckId)
     }
   }
 
@@ -123,22 +129,22 @@ export default function GeneratePage() {
               {healthLoading ? (
                 <div className="flex items-center gap-2 text-muted-foreground bg-muted/50 px-4 py-2 rounded-full">
                   <LoadingSpinner size="sm" />
-                  <span className="text-sm">Checking backend status...</span>
+                  <span className="text-sm">Please wait...</span>
                 </div>
               ) : isHealthy ? (
                 <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full border border-green-200">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Backend Ready</span>
+                  <span className="text-sm font-medium">Ready</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-destructive-foreground bg-destructive px-4 py-2 rounded-full">
+                <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-full border border-red-200">
                   <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Backend Offline</span>
+                  <span className="text-sm font-medium">Offline</span>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={checkHealth}
-                    className="text-xs px-2 py-1 h-auto ml-2 bg-destructive-foreground text-destructive border-destructive-foreground hover:bg-destructive-foreground/90"
+                    className="text-xs px-2 py-1 h-auto ml-2 bg-white text-red-600 border-red-200 hover:bg-red-50"
                   >
                     Retry
                   </Button>
@@ -152,11 +158,11 @@ export default function GeneratePage() {
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
                     <div>
-                      <h3 className="font-medium text-destructive-foreground">Backend Server Unavailable</h3>
-                      <p className="text-sm text-destructive-foreground/90 mt-1">
+                      <h3 className="font-medium text-destructive">Backend Server Unavailable</h3>
+                      <p className="text-sm text-destructive/90 mt-1">
                         The AI backend server is not responding. Please make sure it`&apos;`s running at http://127.0.0.1:8000
                       </p>
-                      {healthError && <p className="text-xs text-destructive-foreground/80 mt-2">{healthError}</p>}
+                      {healthError && <p className="text-xs text-destructive/80 mt-2">{healthError}</p>}
                     </div>
                   </div>
                 </CardContent>
@@ -304,9 +310,8 @@ export default function GeneratePage() {
                     </div>
                   ) : (
                     <div
-                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                        isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25"
-                      }`}
+                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+                        }`}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
@@ -348,7 +353,7 @@ export default function GeneratePage() {
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-                    <div className="text-sm text-destructive-foreground">{error}</div>
+                    <div className="text-sm text-destructive">{error}</div>
                   </div>
                 </CardContent>
               </Card>
@@ -376,28 +381,54 @@ export default function GeneratePage() {
             </Card>
           </div>
         ) : (
-          /* Flashcard Results */
-          <div className="space-y-6">
+          /* Result Interface */
+          <div className="space-y-8 pb-12">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Your Flashcards</h1>
-                <p className="text-muted-foreground">
-                  Generated {flashcards.length} flashcard{flashcards.length !== 1 ? "s" : ""} from your material
-                </p>
-              </div>
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                className="border-border text-foreground hover:bg-accent bg-transparent"
-              >
-                Create New Set
+              <h2 className="text-2xl font-bold text-foreground">Generated Flashcards</h2>
+              <Button onClick={handleReset} variant="outline" className="border-border text-foreground">
+                Start Over
               </Button>
             </div>
 
             <FlashcardViewer flashcards={flashcards} />
+
+            <div className="p-6 bg-primary/5 rounded-xl border border-primary/20 text-center">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Great job!</h3>
+              <p className="text-muted-foreground mb-4">
+                These cards have been saved to your deck. You can find them in the Decks section.
+              </p>
+              <Link href="/decks">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">View My Decks</Button>
+              </Link>
+            </div>
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={showFileErrorModal}
+        onClose={() => setShowFileErrorModal(false)}
+        title="Unsupported File"
+        description="The file you dropped is not supported. Please use PDF, DOCX, TXT, or Markdown files."
+        type="warning"
+        confirmText="Got it"
+        cancelText=""
+      />
     </div>
+  )
+}
+
+export default function GeneratePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    }>
+      <GenerateContent />
+    </Suspense>
   )
 }

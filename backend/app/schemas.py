@@ -36,13 +36,26 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
-
+    password: Optional[str] = None
+    current_password: Optional[str] = None
 
 class UserResponse(UserBase):
     id: UUID
+    is_verified: bool
     created_at: datetime
+    message: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class UserRegistrationResponse(UserResponse):
+    access_token: str
+    token_type: str
 
 
 # ---------------------------
@@ -66,6 +79,8 @@ class DeckResponse(DeckBase):
     user_id: UUID
     created_at: datetime
     updated_at: Optional[datetime]
+    card_count: int = 0
+    summary: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -93,6 +108,7 @@ class FlashcardsRequest(BaseModel):
     question_mode: str = "open_ended"  # "multiple_choice", "true_false", "open_ended"
     difficulty: str = "intermediate"  # "easy", "intermediate", "advanced"
     count: Optional[int] = 10
+    deck_id: Optional[UUID] = None
 
 
 class FlashcardsResponse(BaseModel):
@@ -130,8 +146,7 @@ class FlashcardResponse(FlashcardBase):
     id: UUID
     deck_id: UUID
     created_at: datetime
-    updated_at: datetime
-
+    
     model_config = {"from_attributes": True}
 
 

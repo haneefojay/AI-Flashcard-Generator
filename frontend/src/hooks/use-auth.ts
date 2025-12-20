@@ -11,16 +11,17 @@ interface UseAuthReturn {
   register: (email: string, password: string, name?: string) => Promise<void>
   login: (email: string, password: string) => Promise<void>
   logout: () => void
-  updateProfile: (name?: string, password?: string) => Promise<void>
+  updateProfile: (name?: string, password?: string, currentPassword?: string) => Promise<void>
   deleteAccount: () => Promise<void>
   forgotPassword: (email: string) => Promise<void>
   resetPassword: (token: string, password: string) => Promise<void>
   verifyEmail: (token: string) => Promise<void>
+  resendVerification: (email: string) => Promise<void>
 }
 
 export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<UserProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
@@ -30,7 +31,6 @@ export function useAuth(): UseAuthReturn {
       const token = localStorage.getItem("auth_token")
       if (token) {
         try {
-          setIsLoading(true)
           const profile = await apiClient.getProfile()
           setUser(profile)
           setIsAuthenticated(true)
@@ -41,6 +41,8 @@ export function useAuth(): UseAuthReturn {
         } finally {
           setIsLoading(false)
         }
+      } else {
+        setIsLoading(false)
       }
     }
 
@@ -88,11 +90,15 @@ export function useAuth(): UseAuthReturn {
     setError(null)
   }, [])
 
-  const updateProfile = useCallback(async (name?: string, password?: string) => {
+  const updateProfile = useCallback(async (name?: string, password?: string, currentPassword?: string) => {
     try {
       setIsLoading(true)
       setError(null)
-      const updated = await apiClient.updateProfile({ name, password })
+      const updated = await apiClient.updateProfile({
+        name,
+        password,
+        current_password: currentPassword
+      })
       setUser(updated)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Update failed"
@@ -161,6 +167,20 @@ export function useAuth(): UseAuthReturn {
     }
   }, [])
 
+  const resendVerification = useCallback(async (email: string) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      await apiClient.resendVerification(email)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to resend verification"
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   return {
     user,
     isLoading,
@@ -174,5 +194,6 @@ export function useAuth(): UseAuthReturn {
     forgotPassword,
     resetPassword,
     verifyEmail,
+    resendVerification,
   }
 }

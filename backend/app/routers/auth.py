@@ -11,12 +11,15 @@ from ..services.mail import send_reset_email, send_verification_email
 from datetime import timedelta
 from ..core.security import ACCESS_TOKEN_EXPIRE_MINUTES
 from ..core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth", tags=["Authentication"]
 )
 
-@router.post("/register", response_model=schemas.UserResponse)
+@router.post("/register", response_model=schemas.UserRegistrationResponse)
 async def register_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
     email = user.email.lower()
     existing_user = await db.scalar(select(models.User).where(models.User.email == email))
@@ -28,12 +31,31 @@ async def register_user(user: schemas.UserCreate, db: AsyncSession = Depends(get
     await db.commit()
     await db.refresh(new_user)
 
-    # Optional: send verification email automatically on registration
+    # send verification email automatically on registration
     token = create_verification_token(email)
     verify_link = f"{settings.frontend_url}/auth/verify-email?token={token}"
-    await send_verification_email(email, verify_link)
+    
+    try:
+        await send_verification_email(email, verify_link)
+        message = "User registered successfully. Please check your email for verification."
+    except Exception as e:
+        # Log the error but don't fail registration
+        logger.error(f"Error sending verification email: {str(e)}")
+        message = "User registered successfully, but verification email failed to send. You can verify your email later."
 
-    return new_user
+    # Generate access token for auto-login
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token({"sub": str(new_user.id)}, expires_delta=access_token_expires)
+
+    # Attach message and token to response object
+    user_data = schemas.UserResponse.model_validate(new_user).model_dump()
+    
+    return {
+        **user_data,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "message": message
+    }
 
 
 @router.post("/login")
@@ -45,10 +67,13 @@ async def login_user(form_data: schemas.UserLogin, db: AsyncSession = Depends(ge
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     if not user.is_verified:
+        '''
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please verify your email before logging in."
+            detail="Please verify your email before logging inn."
         )
+        '''
+        pass
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token({"sub": str(user.id)}, expires_delta=access_token_expires)
@@ -80,10 +105,14 @@ async def forgot_password(data: schemas.ForgetPasswordRequest, db: AsyncSession 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     token = create_reset_token(user.email)
-    reset_link = f"{settings.frontend_url}/reset-password?token={token}"
-    await send_reset_email(user.email, reset_link)
-
-    return {"message": "Password reset email sent!"}
+    reset_link = f"{settings.frontend_url}/auth/reset-password?token={token}"
+    
+    try:
+        await send_reset_email(user.email, reset_link)
+        return {"message": "Password reset email sent!"}
+    except Exception as e:
+        logger.error(f"Error sending reset email: {str(e)}")
+        return {"message": "User found, but password reset email failed to send. Please try again later or contact support."}
 
 
 @router.post("/reset-password")
@@ -114,10 +143,14 @@ async def send_verification(email: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     token = create_verification_token(user.email)
-    verify_link = f"{settings.frontend_url}/verify-email?token={token}"
-    await send_verification_email(user.email, verify_link)
-
-    return {"message": "Verification email sent successfully"}
+    verify_link = f"{settings.frontend_url}/auth/verify-email?token={token}"
+    
+    try:
+        await send_verification_email(user.email, verify_link)
+        return {"message": "Verification email sent successfully"}
+    except Exception as e:
+        logger.error(f"Error sending verification email: {str(e)}")
+        return {"message": "Email verification could not be sent at this time. Please try again later."}
 
 
 @router.get("/verify-email", response_class=HTMLResponse)
@@ -158,7 +191,10 @@ async def resend_verification(email: str, db: AsyncSession = Depends(get_db)):
         )
 
     token = create_verification_token(user.email)
-    verify_link = f"{settings.frontend_url}/verify-email?token={token}"
-    await send_verification_email(user.email, verify_link)
-
-    return {"message": "Verification email resent successfully"}
+    verify_link = f"{settings.frontend_url}/auth/verify-email?token={token}"
+    try:
+        await send_verification_email(user.email, verify_link)
+        return {"message": "Verification email resent successfully"}
+    except Exception as e:
+        logger.error(f"Error resending verification email: {str(e)}")
+        return {"message": "Verification email could not be resent at this time. Please try again later."}
