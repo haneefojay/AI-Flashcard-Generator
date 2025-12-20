@@ -10,7 +10,7 @@ import { Brain, CheckCircle, AlertCircle } from "lucide-react"
 export default function VerifyEmailPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { verifyEmail, isLoading } = useAuth()
+  const { verifyEmail } = useAuth()
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
   const [message, setMessage] = useState("")
 

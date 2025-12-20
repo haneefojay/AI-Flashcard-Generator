@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
 import { useDecks } from "@/hooks/use-decks"
 import { Navigation } from "@/components/navigation"
-import { Download, Share2, Trash2, ChevronLeft, ChevronRight, Edit2, Check, X, Sparkles } from "lucide-react"
+import { Download, Share2, Trash2, ChevronLeft, Edit2, Check, X, Sparkles } from "lucide-react"
 import { apiClient, type Deck, type Flashcard } from "@/lib/api-client"
 import { FlashcardViewer } from "@/components/flashcard-viewer"
 import { Input } from "@/components/ui/input"
@@ -34,7 +34,6 @@ export default function DeckDetailPage() {
   // Modal States
   const [showShareModal, setShowShareModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [shareUrl, setShareUrl] = useState("")
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -93,7 +92,6 @@ export default function DeckDetailPage() {
         await navigator.share({ title: deck?.name, url: url })
       } else {
         await navigator.clipboard.writeText(url)
-        setShareUrl(url)
         setShowShareModal(true)
       }
     } catch (err) {

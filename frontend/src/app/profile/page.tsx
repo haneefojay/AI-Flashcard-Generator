@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/use-auth"
 import { Navigation } from "@/components/navigation"
 import { LogOut, Trash2, ChevronLeft, Loader2, CheckCircle, ShieldAlert } from "lucide-react"
 import { Modal } from "@/components/ui/modal"
-import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/toast"
 
 export default function ProfilePage() {

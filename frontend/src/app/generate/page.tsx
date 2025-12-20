@@ -108,8 +108,7 @@ function GenerateContent() {
 
   const hasTextInput = inputText.trim().length > 0
   const hasFileInput = uploadedFile !== null
-  const canGenerate = (hasTextInput || hasFileInput) && isHealthy && !isLoading
-
+  
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
