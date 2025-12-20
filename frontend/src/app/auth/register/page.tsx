@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
 import { Brain } from "lucide-react"
-import { GoogleLogin } from "@react-oauth/google"
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -20,13 +20,13 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [localError, setLocalError] = useState("")
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
       if (credentialResponse.credential) {
         await loginWithGoogle(credentialResponse.credential)
         router.push("/generate")
       }
-    } catch (err) {
+    } catch {
       setLocalError("Google sign-in failed. Please try again.")
     }
   }

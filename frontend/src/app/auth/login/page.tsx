@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
 import { Brain } from "lucide-react"
-import { GoogleLogin } from "@react-oauth/google"
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google"
 import { useToast } from "@/components/ui/toast"
 
 export default function LoginPage() {
@@ -20,13 +20,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [localError, setLocalError] = useState("")
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
       if (credentialResponse.credential) {
         await loginWithGoogle(credentialResponse.credential)
         router.push("/generate")
       }
-    } catch (err) {
+    } catch {
       setLocalError("Google sign-in failed. Please try again.")
     }
   }
@@ -53,7 +53,7 @@ export default function LoginPage() {
       await resendVerification(email)
       showToast("Verification email sent! Please check your inbox.", "success")
       setLocalError("")
-    } catch (err) {
+    } catch {
       showToast("Failed to resend verification email.", "error")
     }
   }
