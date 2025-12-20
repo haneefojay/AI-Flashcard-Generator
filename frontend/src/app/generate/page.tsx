@@ -108,7 +108,7 @@ function GenerateContent() {
 
   const hasTextInput = inputText.trim().length > 0
   const hasFileInput = uploadedFile !== null
-  
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -157,10 +157,7 @@ function GenerateContent() {
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
                     <div>
-                      <h3 className="font-medium text-destructive">Backend Server Unavailable</h3>
-                      <p className="text-sm text-destructive/90 mt-1">
-                        The AI backend server is not responding. Please make sure it`&apos;`s running at http://127.0.0.1:8000
-                      </p>
+                      <h3 className="font-medium text-destructive">Server Unavailable</h3>
                       {healthError && <p className="text-xs text-destructive/80 mt-2">{healthError}</p>}
                     </div>
                   </div>

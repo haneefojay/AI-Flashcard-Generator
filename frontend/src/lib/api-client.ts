@@ -90,7 +90,7 @@ class ApiClient {
   private baseUrl: string
   private token: string | null = null
 
-  constructor(baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000") {
+  constructor(baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000") {
     this.baseUrl = baseUrl
     // Load token from localStorage if available
     if (typeof window !== "undefined") {
