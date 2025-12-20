@@ -6,12 +6,15 @@ from pydantic import validator
 class Settings(BaseSettings):
     project_name: str
     version: str
-    backend_cors_origins: List[str] = []
+    backend_cors_origins: Union[List[str], str] = []
     
     @validator("backend_cors_origins", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str):
+        if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
+        elif isinstance(v, str) and v.startswith("["):
+            import json
+            return json.loads(v)
         return v
     
     groq_api_key: str    
@@ -51,8 +54,3 @@ class Settings(BaseSettings):
         extra = "ignore" 
 
 settings = Settings()
-
-if isinstance(settings.backend_cors_origins, str):
-    settings.backend_cors_origins = [
-        origin.strip() for origin in settings.backend_cors_origins.split(",")
-    ]
