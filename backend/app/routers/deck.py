@@ -7,7 +7,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.core.security import get_current_user
 from app.models import Deck, Flashcard
-from app.core.settings import settings
+from app.core.config import settings
 
 
 router = APIRouter(prefix="/decks", tags=["Decks"])
