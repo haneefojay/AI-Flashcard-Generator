@@ -7,10 +7,12 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, FileText, Sparkles, AlertCircle, CheckCircle, Upload, X } from "lucide-react"
 import { FlashcardViewer } from "@/components/flashcard-viewer"
 import { useFlashcards } from "@/hooks/use-flashcards"
 import { useHealthCheck } from "@/hooks/use-health-check"
+import { useAuth } from "@/hooks/use-auth"
 import { Navigation } from "@/components/navigation"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Modal } from "@/components/ui/modal"
@@ -31,6 +33,7 @@ function GenerateContent() {
   const { flashcards, summary, isLoading, error, generateFlashcards, uploadFileForFlashcards, clearFlashcards, clearError } =
     useFlashcards()
   const { isHealthy, isLoading: healthLoading, error: healthError, checkHealth } = useHealthCheck()
+  const { isAuthenticated } = useAuth()
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -173,28 +176,36 @@ function GenerateContent() {
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Question Mode</label>
-                    <select
+                    <Select
                       value={questionMode}
-                      onChange={(e) => setQuestionMode(e.target.value as "multiple_choice" | "open-ended" | "true_false")}
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      onValueChange={(value) => setQuestionMode(value as "multiple_choice" | "open-ended" | "true_false")}
                     >
-                      <option value="open-ended">Open-Ended</option>
-                      <option value="multiple_choice">Multiple Choice</option>
-                      <option value="true_false">True or False</option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open-ended">Open-Ended</SelectItem>
+                        <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                        <SelectItem value="true_false">True or False</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Difficulty Level</label>
-                    <select
+                    <Select
                       value={difficulty}
-                      onChange={(e) => setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced")}
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      onValueChange={(value) => setDifficulty(value as "beginner" | "intermediate" | "advanced")}
                     >
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -402,17 +413,17 @@ function GenerateContent() {
               </Card>
             )}
 
-
-
-            <div className="p-6 bg-primary/5 rounded-xl border border-primary/20 text-center">
-              <h3 className="text-lg font-semibold text-foreground mb-2">Great job!</h3>
-              <p className="text-muted-foreground mb-4">
-                These cards have been saved to your deck. You can find them in the Decks section.
-              </p>
-              <Link href="/decks">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">View My Decks</Button>
-              </Link>
-            </div>
+            {isAuthenticated && (
+              <div className="p-6 bg-primary/5 rounded-xl border border-primary/20 text-center">
+                <h3 className="text-lg font-semibold text-foreground mb-2">Great job!</h3>
+                <p className="text-muted-foreground mb-4">
+                  These cards have been saved to your deck. You can find them in the Decks section.
+                </p>
+                <Link href="/decks">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">View My Decks</Button>
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>

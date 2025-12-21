@@ -147,13 +147,13 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error(`Health check failed: ${response.status}`)
+        await this.parseErrorResponse(response, "Backend server is not available")
       }
 
       return await response.json()
     } catch (error) {
       console.error("Health check error:", error)
-      throw new Error("Backend server is not available")
+      throw error
     }
   }
 
@@ -180,13 +180,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        if (response.status === 422) {
-          throw new Error("Invalid input text. Please check your content and try again.")
-        }
-        if (response.status >= 500) {
-          throw new Error("Server error. Please try again later.")
-        }
-        throw new Error(`Failed to generate flashcards: ${response.status}`)
+        await this.parseErrorResponse(response, "Failed to generate flashcards")
       }
 
       const data = await response.json()
@@ -198,10 +192,7 @@ class ApiClient {
       return data
     } catch (error) {
       console.error("Generate flashcards error:", error)
-      if (error instanceof Error) {
-        throw error
-      }
-      throw new Error("Failed to generate flashcards. Please make sure the backend is running.")
+      throw error
     }
   }
 
@@ -232,13 +223,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        if (response.status === 422) {
-          throw new Error("Invalid file format or content. Please check your file and try again.")
-        }
-        if (response.status >= 500) {
-          throw new Error("Server error. Please try again later.")
-        }
-        throw new Error(`Failed to process file: ${response.status}`)
+        await this.parseErrorResponse(response, "Failed to process file")
       }
 
       const data = await response.json()
@@ -250,10 +235,7 @@ class ApiClient {
       return data
     } catch (error) {
       console.error("Upload file error:", error)
-      if (error instanceof Error) {
-        throw error
-      }
-      throw new Error("Failed to process uploaded file. Please make sure the backend is running.")
+      throw error
     }
   }
 
@@ -265,7 +247,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch flashcards")
+        await this.parseErrorResponse(response, "Failed to fetch flashcards")
       }
 
       return await response.json()
@@ -284,8 +266,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Registration failed")
+        await this.parseErrorResponse(response, "Registration failed")
       }
 
       const result = await response.json()
@@ -368,7 +349,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update profile")
+        await this.parseErrorResponse(response, "Failed to update profile")
       }
 
       return await response.json()
@@ -386,7 +367,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to delete account")
+        await this.parseErrorResponse(response, "Failed to delete account")
       }
 
       this.clearToken()
@@ -405,7 +386,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to send reset email")
+        await this.parseErrorResponse(response, "Failed to send reset email")
       }
 
       return await response.json()
@@ -424,7 +405,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to reset password")
+        await this.parseErrorResponse(response, "Failed to reset password")
       }
 
       return await response.json()
@@ -443,25 +424,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        // Try to parse backend error body (detail/message)
-        let errorBody: unknown = null
-        try {
-          errorBody = await response.json()
-        } catch {
-          // ignore JSON parse errors
-        }
-
-        // Narrow possible shapes
-        const detail = (errorBody && typeof errorBody === "object" && "detail" in (errorBody as Record<string, unknown>)
-          ? (errorBody as Record<string, unknown>)["detail"]
-          : (errorBody && typeof errorBody === "object" && "message" in (errorBody as Record<string, unknown>)
-            ? (errorBody as Record<string, unknown>)["message"]
-            : null)) as string | null
-
-        const message = detail || `Verification failed (${response.status})`
-        const err: Error & { status?: number } = new Error(message)
-        err.status = response.status
-        throw err
+        await this.parseErrorResponse(response, "Verification failed")
       }
 
       // The backend returns an HTMLResponse on success. Try to read text first,
@@ -505,7 +468,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch decks")
+        await this.parseErrorResponse(response, "Failed to fetch decks")
       }
 
       const data = await response.json()
@@ -524,7 +487,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch deck")
+        await this.parseErrorResponse(response, "Failed to fetch deck")
       }
 
       return await response.json()
@@ -543,7 +506,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create deck")
+        await this.parseErrorResponse(response, "Failed to create deck")
       }
 
       return await response.json()
@@ -562,7 +525,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update deck")
+        await this.parseErrorResponse(response, "Failed to update deck")
       }
 
       return await response.json()
@@ -580,7 +543,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to delete deck")
+        await this.parseErrorResponse(response, "Failed to delete deck")
       }
     } catch (error) {
       console.error("Delete deck error:", error)
@@ -596,7 +559,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to export deck")
+        await this.parseErrorResponse(response, "Failed to export deck")
       }
 
       return await response.blob()
@@ -614,7 +577,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to share deck")
+        await this.parseErrorResponse(response, "Failed to share deck")
       }
 
       return await response.json()
@@ -631,7 +594,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Shared deck not found")
+        await this.parseErrorResponse(response, "Shared deck not found")
       }
 
       return await response.json()
@@ -648,7 +611,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error("Shared flashcards not found")
+        await this.parseErrorResponse(response, "Shared flashcards not found")
       }
 
       return await response.json()

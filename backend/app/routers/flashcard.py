@@ -13,7 +13,7 @@ from typing import Optional
 from ..database import get_db
 from ..models import User, Deck, Flashcard
 from ..schemas import FlashcardsRequest, FlashcardsResponse, FlashcardResponse
-from ..core.security import get_current_user
+from ..core.security import get_current_user, get_optional_current_user
 from typing import List
 from uuid import UUID, uuid4
 
@@ -67,8 +67,13 @@ async def get_shared_flashcards(share_id: str, db: AsyncSession = Depends(get_db
 async def generate_flashcards(
     request: FlashcardsRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
+    """
+    Generate flashcards from text.
+    - Authenticated users: flashcards are saved to a new or existing deck
+    - Anonymous users: flashcards are returned without being saved
+    """
     try:
         flashcards_data = await generate_flashcards_with_groq(
             text=request.text,
@@ -84,7 +89,17 @@ async def generate_flashcards(
                 detail="Failed to generate flashcards"
             )
 
+        # If user is not authenticated, just return the flashcards without saving
+        if current_user is None:
+            # Anonymous users cannot specify a deck_id
+            if request.deck_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required to save flashcards to a deck"
+                )
+            return flashcards_data
 
+        # For authenticated users, save flashcards to a deck
         if request.deck_id:
             deck = await db.scalar(
                 select(Deck).where(Deck.id == request.deck_id, Deck.user_id == current_user.id)
@@ -130,6 +145,8 @@ async def generate_flashcards(
         await db.commit()
         return flashcards_data
 
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(
@@ -147,11 +164,12 @@ async def upload_file_for_flashcards(
     difficulty: str = Form("intermediate"),
     deck_id: Optional[UUID] = Form(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
-    
     """
     Upload a file (PDF, DOCX, TXT, MD) and generate flashcards from its content.
+    - Authenticated users: flashcards are saved to a new or existing deck
+    - Anonymous users: flashcards are returned without being saved
     """
     try:
         suffix = os.path.splitext(file.filename)[-1]
@@ -182,7 +200,17 @@ async def upload_file_for_flashcards(
                     detail="Failed to generate flashcards"
                 )
 
+            # If user is not authenticated, just return the flashcards without saving
+            if current_user is None:
+                # Anonymous users cannot specify a deck_id
+                if deck_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Authentication required to save flashcards to a deck"
+                    )
+                return result
 
+            # For authenticated users, save flashcards to a deck
             if deck_id:
                 deck = await db.scalar(
                     select(Deck).where(Deck.id == deck_id, Deck.user_id == current_user.id)
@@ -206,21 +234,6 @@ async def upload_file_for_flashcards(
                 await db.commit()
                 await db.refresh(deck)
             
-            '''
-            # Store flashcards in this new deck
-            flashcards = []
-            for card in result["cards"]:
-                new_fc = Flashcard(
-                    id=uuid4(),
-                    question=card["question"],
-                    answer=card["answer"],
-                    deck_id=deck.id,
-                    user_id=current_user.id,
-                    created_at=datetime.now(timezone.utc)                
-                )
-                db.add(new_fc)
-                flashcards.append(new_fc)                
-            '''
             for card in result["cards"]:
                 question = card.get("question")
                 answer = card.get("answer")
@@ -241,6 +254,8 @@ async def upload_file_for_flashcards(
 
             await db.commit()
             return result
+        except HTTPException:
+            raise
         except Exception as e:
             await db.rollback()
             import logging

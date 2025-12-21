@@ -16,6 +16,7 @@ ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 def create_access_token(subject: Dict[str, Any], expires_delta: Optional[timedelta] = None):
     
@@ -55,4 +56,35 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     if user is None:
         raise credentials_exception
     
+    return user
+
+
+async def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme_optional), 
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    """
+    Returns the current user if a valid token is provided, otherwise returns None.
+    This allows endpoints to work for both authenticated and anonymous users.
+    """
+    if not token:
+        return None
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        
+        try:
+            if not isinstance(user_id, UUID):
+                user_id = UUID(user_id)
+        except ValueError:
+            return None
+    
+    except JWTError:
+        return None
+
+    query = await db.execute(select(User).where(User.id == user_id))
+    user = query.scalar_one_or_none()
     return user

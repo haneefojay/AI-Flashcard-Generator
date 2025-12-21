@@ -31,14 +31,12 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    # Create tables if they don't exist
     async with engine.begin() as conn:
         await conn.run_sync(lambda sync_conn: Base.metadata.create_all(bind=sync_conn))
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    # Close database connections
     await engine.dispose()
     logger.info("Closed database connections")
 
@@ -46,7 +44,6 @@ async def shutdown():
 async def health_check():
     """Health check endpoint with database connection test"""
     try:
-        # Test database connection
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
             db_status = "connected"
