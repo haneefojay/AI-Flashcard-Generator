@@ -1,7 +1,7 @@
 # Build stage
 FROM python:3.11-slim-bookworm AS builder
 
-WORKDIR /app
+WORKDIR /backend/app
 
 # Create virtual environment
 RUN python -m venv /opt/venv
