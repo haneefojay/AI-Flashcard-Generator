@@ -23,30 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY /backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Final stage
-FROM python:3.11-slim-bookworm
-
-WORKDIR /backend/app
-
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
-
-# Install only runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libjpeg62-turbo \
-    zlib1g \
-    libfreetype6 \
-    libharfbuzz0b \
-    libfribidi0 \
-    libxcb1 \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd -m appuser \
-    && chown -R appuser:appuser /app
 
 # Copy application code
 COPY --chown=appuser:appuser . .
