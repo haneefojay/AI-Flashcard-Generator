@@ -2,12 +2,17 @@ version: "3.9"
 
 services:
   api:
-    build: .
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: flashcard-container
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: ${{Postgres.DATABASE_URL}}
     volumes:
-      - .:/app
+      - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+

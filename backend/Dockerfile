@@ -1,13 +1,9 @@
-# Build stage
-FROM python:3.11-slim-bookworm AS builder
+# syntax=docker/dockerfile:1
+FROM python:3.12-slim
 
 WORKDIR /backend/app
 
-# Create virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
@@ -23,21 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY /backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
+# Copy source code
+COPY . .
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# Copy application code
-COPY --chown=appuser:appuser . .
-
-# Switch to non-root user
-USER appuser
-
-# Expose port
 EXPOSE 8000
 
-# Run with multiple workers
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
