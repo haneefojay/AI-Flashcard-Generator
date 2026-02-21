@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.project_name,
     version=settings.version,
-    description="AI-powered flashcard generation API"
+    description="AI-powered flashcard generation API",
+    redirect_slashes=False,
 )
 
 app.add_middleware(

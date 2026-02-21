@@ -12,7 +12,7 @@ from app.core.config import settings
 
 router = APIRouter(prefix="/decks", tags=["Decks"])
 
-@router.post("/", response_model=schemas.DeckResponse)
+@router.post("", response_model=schemas.DeckResponse)
 async def create_deck(deck: schemas.DeckCreate, db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     
     new_deck = models.Deck(
@@ -25,7 +25,7 @@ async def create_deck(deck: schemas.DeckCreate, db: AsyncSession = Depends(get_d
     await db.refresh(new_deck)
     return new_deck
 
-@router.get("/", response_model=list[schemas.DeckResponse])
+@router.get("", response_model=list[schemas.DeckResponse])
 async def get_user_decks(db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     
         
